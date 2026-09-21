@@ -313,11 +313,11 @@
       </div>
 
       <!-- Mode Switcher (Min 42px touch height) -->
-      <div class="mt-2.5 p-1 rounded-2xl glass-panel flex items-center gap-1">
-        <button id="modeStandardBtn" type="button" class="tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30">
+      <div class="mt-2.5 p-1.5 rounded-2xl glass-panel flex items-center gap-2">
+        <button id="modeStandardBtn" type="button" class="tap-scale flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs font-mono font-bold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30 flex items-center justify-center select-none">
           STANDARD
         </button>
-        <button id="modeShiftBtn" type="button" class="tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent">
+        <button id="modeShiftBtn" type="button" class="tap-scale flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs font-mono font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent flex items-center justify-center select-none">
           11H SHIFT
         </button>
       </div>
@@ -681,125 +681,15 @@
       });
     }
 
-    /* Theme Management (Auto / Dark / Light) with Persistence */
+    /* 1. DOM Elements */
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeSunIcon = document.getElementById('themeSunIcon');
     const themeMoonIcon = document.getElementById('themeMoonIcon');
     const metaThemeColor = document.getElementById('metaThemeColor');
-
-    let currentTheme = localStorage.getItem('cycle_theme') || 'auto';
-
-    function applyTheme(theme) {
-      currentTheme = theme;
-      localStorage.setItem('cycle_theme', theme);
-      
-      let isDark = false;
-      if (theme === 'dark') {
-        isDark = true;
-      } else if (theme === 'light') {
-        isDark = false;
-      } else {
-        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-        themeSunIcon.classList.remove('hidden');
-        themeMoonIcon.classList.add('hidden');
-        if (metaThemeColor) metaThemeColor.setAttribute('content', '#060a12');
-      } else {
-        document.documentElement.classList.remove('dark');
-        themeSunIcon.classList.add('hidden');
-        themeMoonIcon.classList.remove('hidden');
-        if (metaThemeColor) metaThemeColor.setAttribute('content', '#f1f5f9');
-      }
-      wakeLiquid();
-    }
-
-    applyTheme(currentTheme);
-
-    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-    themeMedia.addEventListener('change', (e) => {
-      if (currentTheme === 'auto') applyTheme('auto');
-    });
-
-    themeToggleBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, themeToggleBtn);
-      playTactileFeedback(15);
-      if (currentTheme === 'auto') {
-        applyTheme('dark');
-        showToast('Theme: Dark');
-      } else if (currentTheme === 'dark') {
-        applyTheme('light');
-        showToast('Theme: Light');
-      } else {
-        applyTheme('auto');
-        showToast('Theme: Auto');
-      }
-    });
-
-    /* Haptic & Audio Feedback Control */
-    let soundEnabled = localStorage.getItem('cycle_sound') !== 'false';
     const soundToggleBtn = document.getElementById('soundToggleBtn');
     const soundOnIcon = document.getElementById('soundOnIcon');
     const soundOffIcon = document.getElementById('soundOffIcon');
 
-    function updateSoundIcon() {
-      if (soundEnabled) {
-        soundOnIcon.classList.remove('hidden');
-        soundOffIcon.classList.add('hidden');
-      } else {
-        soundOnIcon.classList.add('hidden');
-        soundOffIcon.classList.remove('hidden');
-      }
-    }
-    updateSoundIcon();
-
-    soundToggleBtn.addEventListener('click', (e) => {
-      soundEnabled = !soundEnabled;
-      localStorage.setItem('cycle_sound', soundEnabled);
-      updateSoundIcon();
-      spawnLiquidRipple(e, soundToggleBtn);
-      playTactileFeedback(20);
-      showToast(soundEnabled ? 'Audio: On' : 'Audio: Muted');
-    });
-
-    let audioCtx = null;
-    function playTactileFeedback(duration = 12) {
-      // Mobile Vibration Haptic (supported on Android Chrome, etc.)
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate(duration); } catch (e) {}
-      }
-
-      // Subtle Web Audio Click Tone
-      if (!soundEnabled) return;
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(900, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.035);
-        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.035);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.04);
-      } catch (e) {}
-    }
-
-    /* Active Calculation Mode: 'standard' | 'shift' */
-    let currentMode = localStorage.getItem('cycle_mode') || 'standard';
-    const SHIFT_SECONDS = 11 * 3600; // 11h = 39,600s
-    let unitPreference = localStorage.getItem('cycle_unit_pref') || 'auto'; // 'auto' | 'sec' | 'min'
-
-    // Mode Buttons & Sections
     const modeStandardBtn = document.getElementById('modeStandardBtn');
     const modeShiftBtn = document.getElementById('modeShiftBtn');
     const standardTimeSection = document.getElementById('standardTimeSection');
@@ -807,21 +697,24 @@
     const timeLabel = document.getElementById('timeLabel');
     const netTimeDisplay = document.getElementById('netTimeDisplay');
 
-    // Inputs
     const qtyInput = document.getElementById('qtyInput');
     const hoursInput = document.getElementById('hoursInput');
     const minsInput = document.getElementById('minsInput');
     const secsInput = document.getElementById('secsInput');
     const downtimeInput = document.getElementById('downtimeInput');
-    
-    // Outputs
+
     const cycleTimeMain = document.getElementById('cycleTimeMain');
     const cycleTimeUnit = document.getElementById('cycleTimeUnit');
     const cycleTimeAlt = document.getElementById('cycleTimeAlt');
     const pphValue = document.getElementById('pphValue');
     const totalTimeFormatted = document.getElementById('totalTimeFormatted');
     const unitToggleBtn = document.getElementById('unitToggleBtn');
-    
+
+    const qtyMinusBtn = document.getElementById('qtyMinusBtn');
+    const qtyPlusBtn = document.getElementById('qtyPlusBtn');
+    const dtMinusBtn = document.getElementById('dtMinusBtn');
+    const dtPlusBtn = document.getElementById('dtPlusBtn');
+
     const resetBtn = document.getElementById('resetBtn');
     const copyResultBtn = document.getElementById('copyResultBtn');
     const shareResultBtn = document.getElementById('shareResultBtn');
@@ -829,13 +722,6 @@
     const heroCard = document.getElementById('heroCard');
     const liquidCanvas = document.getElementById('liquidCanvas');
 
-    // Stepper Buttons
-    const qtyMinusBtn = document.getElementById('qtyMinusBtn');
-    const qtyPlusBtn = document.getElementById('qtyPlusBtn');
-    const dtMinusBtn = document.getElementById('dtMinusBtn');
-    const dtPlusBtn = document.getElementById('dtPlusBtn');
-
-    // Mobile App (PWA) Manifest Dynamic Fallback
     const installAppBtn = document.getElementById('installAppBtn');
     const installBtnText = document.getElementById('installBtnText');
     const installModal = document.getElementById('installModal');
@@ -849,6 +735,20 @@
     const savedCount = document.getElementById('savedCount');
     const clearRecordsBtn = document.getElementById('clearRecordsBtn');
 
+    /* 2. Application State */
+    let currentTheme = 'auto';
+    try { currentTheme = localStorage.getItem('cycle_theme') || 'auto'; } catch(e) {}
+
+    let soundEnabled = true;
+    try { soundEnabled = localStorage.getItem('cycle_sound') !== 'false'; } catch(e) {}
+
+    let currentMode = 'standard';
+    try { currentMode = localStorage.getItem('cycle_mode') || 'standard'; } catch(e) {}
+
+    let unitPreference = 'auto';
+    try { unitPreference = localStorage.getItem('cycle_unit_pref') || 'auto'; } catch(e) {}
+
+    const SHIFT_SECONDS = 11 * 3600; // 11h = 39,600s
     let deferredPrompt = null;
     let savedRuns = [];
     try {
@@ -858,160 +758,8 @@
       savedRuns = [];
     }
 
-    // Check if app is already running in standalone mobile mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (isStandalone) {
-      installBtnText.textContent = 'INSTALLED';
-      installAppBtn.classList.add('opacity-75');
-    }
-
-    // Capture Android/Chrome Install Prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      promptInstallAction.classList.remove('hidden');
-      installBtnText.textContent = 'INSTALL';
-    });
-
-    installAppBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, installAppBtn);
-      playTactileFeedback();
-      installModal.classList.remove('hidden');
-    });
-
-    closeInstallModal.addEventListener('click', () => {
-      installModal.classList.add('hidden');
-    });
-
-    installModal.addEventListener('click', (e) => {
-      if (e.target === installModal) installModal.classList.add('hidden');
-    });
-
-    nativeInstallTrigger.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          showToast('App Installed');
-          installModal.classList.add('hidden');
-        }
-        deferredPrompt = null;
-      }
-    });
-
-    // Saved Runs Feature with LocalStorage
-    function saveRunsToStorage() {
-      try {
-        localStorage.setItem('cycle_saved_runs', JSON.stringify(savedRuns));
-      } catch (e) {}
-    }
-
-    function renderSavedRuns() {
-      if (savedRuns.length === 0) {
-        savedRecordsContainer.classList.add('hidden');
-        return;
-      }
-      savedRecordsContainer.classList.remove('hidden');
-      savedCount.textContent = savedRuns.length;
-      recordsList.innerHTML = '';
-
-      savedRuns.slice().reverse().forEach((run) => {
-        const item = document.createElement('div');
-        item.className = 'flex items-center justify-between p-2 rounded-xl bg-black/5 dark:bg-white/[0.04] text-xs font-mono group hover:bg-teal-500/10 transition-colors cursor-pointer';
-        item.innerHTML = `
-          <div class="flex-1 pr-2" data-load-run="${run.id}">
-            <div class="font-bold text-slate-800 dark:text-slate-200">${run.cycleTime}</div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400">${run.qty} pcs • ${run.pph} pcs/h • ${run.time}</div>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[9px] uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 font-bold">${run.mode}</span>
-            <button type="button" data-delete-run="${run.id}" title="Delete" class="p-1 text-slate-400 hover:text-rose-500 tap-scale">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-        `;
-
-        // Click run to reload parameters
-        item.querySelector('[data-load-run]').addEventListener('click', () => {
-          loadRun(run);
-        });
-
-        // Delete individual run
-        item.querySelector('[data-delete-run]').addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteRun(run.id);
-        });
-
-        recordsList.appendChild(item);
-      });
-    }
-
-    function loadRun(run) {
-      playTactileFeedback(15);
-      if (run.mode === 'STD') {
-        setMode('standard');
-        qtyInput.value = run.qty;
-        if (run.rawSeconds) {
-          const totalSec = run.rawSeconds;
-          hoursInput.value = Math.floor(totalSec / 3600);
-          minsInput.value = Math.floor((totalSec % 3600) / 60);
-          secsInput.value = totalSec % 60;
-        }
-      } else {
-        setMode('shift');
-        qtyInput.value = run.qty;
-        if (run.rawDowntime !== undefined) {
-          downtimeInput.value = run.rawDowntime;
-        }
-      }
-      recalculate();
-      showToast('Loaded Run');
-      triggerLiquidSplash(20);
-    }
-
-    function deleteRun(id) {
-      playTactileFeedback(10);
-      savedRuns = savedRuns.filter(r => r.id !== id);
-      saveRunsToStorage();
-      renderSavedRuns();
-      showToast('Run Removed');
-    }
-
-    saveRecordBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, saveRecordBtn);
-      triggerLiquidSplash(18);
-      playTactileFeedback(18);
-
-      const newRun = {
-        id: Date.now(),
-        cycleTime: `${cycleTimeMain.textContent} ${cycleTimeUnit.textContent}`,
-        qty: qtyInput.value || '0',
-        pph: pphValue.textContent,
-        time: totalTimeFormatted.textContent,
-        mode: currentMode === 'standard' ? 'STD' : '11H',
-        rawSeconds: currentMode === 'standard' 
-          ? ((parseFloat(hoursInput.value) || 0) * 3600 + (parseFloat(minsInput.value) || 0) * 60 + (parseFloat(secsInput.value) || 0))
-          : null,
-        rawDowntime: currentMode === 'shift' ? parseFloat(downtimeInput.value) || 0 : null
-      };
-
-      savedRuns.push(newRun);
-      saveRunsToStorage();
-      renderSavedRuns();
-      showToast('Run Saved');
-    });
-
-    clearRecordsBtn.addEventListener('click', () => {
-      if (savedRuns.length === 0) return;
-      playTactileFeedback(20);
-      savedRuns = [];
-      saveRunsToStorage();
-      renderSavedRuns();
-      showToast('All Cleared');
-    });
-
-    /* Liquid Physics Engine (Battery-Efficient with Idle Detection) */
-    const ctx = liquidCanvas.getContext('2d');
+    /* 3. Liquid Wave Canvas State */
+    const ctx = liquidCanvas ? liquidCanvas.getContext('2d') : null;
     let width = 0;
     let height = 0;
     let isCanvasSleeping = false;
@@ -1041,9 +789,11 @@
       wobble: Math.random() * Math.PI * 2
     }));
 
+    /* 4. Canvas Physics Functions */
     function resizeCanvas() {
+      if (!heroCard || !liquidCanvas || !ctx) return;
       const rect = heroCard.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2 for mobile GPU efficiency
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = rect.width;
       height = rect.height;
       if (width === 0 || height === 0) return;
@@ -1061,14 +811,13 @@
       }
       wakeLiquid();
     }
-    window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 40);
 
     function wakeLiquid() {
-      if (isCanvasSleeping) {
+      if (!ctx) return;
+      if (isCanvasSleeping || !animFrameId) {
         isCanvasSleeping = false;
         if (!animFrameId) {
-          animFrameId = requestAnimationFrame(drawLiquidWave);
+          animFrameId = window.requestAnimationFrame(drawLiquidWave);
         }
       }
     }
@@ -1086,21 +835,22 @@
         }
       }
 
-      cycleTimeMain.style.transform = 'scale(1.04) translateY(-1px)';
-      setTimeout(() => {
-        cycleTimeMain.style.transform = 'scale(1)';
-      }, 150);
+      if (cycleTimeMain) {
+        cycleTimeMain.style.transform = 'scale(1.04) translateY(-1px)';
+        setTimeout(() => {
+          if (cycleTimeMain) cycleTimeMain.style.transform = 'scale(1)';
+        }, 150);
+      }
     }
 
     function drawLiquidWave() {
-      if (!width || !height || document.hidden) {
+      if (!width || !height || !ctx || document.hidden) {
         animFrameId = null;
         return;
       }
 
       ctx.clearRect(0, 0, width, height);
 
-      // Smooth gravity interpolation
       currentGx += (targetGx - currentGx) * 0.08;
       currentGy += (targetGy - currentGy) * 0.08;
       waveStep += 0.035;
@@ -1129,7 +879,6 @@
         totalEnergy += Math.abs(diff) + Math.abs(nodes[i].vy);
       }
 
-      // Dual-pass wave diffusion
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < NUM_POINTS; i++) {
           if (i > 0) {
@@ -1143,7 +892,6 @@
         }
       }
 
-      // Primary Liquid Surface
       ctx.beginPath();
       ctx.moveTo(0, height);
       ctx.lineTo(0, nodes[0].y);
@@ -1180,12 +928,10 @@
       ctx.fillStyle = waveGrad1;
       ctx.fill();
 
-      // Liquid Surface Meniscus Highlight
       ctx.lineWidth = 1.6;
       ctx.strokeStyle = isDark ? 'rgba(0, 245, 212, 0.45)' : 'rgba(13, 148, 136, 0.4)';
       ctx.stroke();
 
-      // Buoyancy Bubbles
       bubbles.forEach((b) => {
         b.wobble += 0.05;
         b.vx -= currentGx * 0.1 + Math.sin(b.wobble) * 0.03;
@@ -1217,94 +963,567 @@
         ctx.fill();
       });
 
-      // Battery Optimization: Idle detection
-      // If motion is stable and no touch/gyro displacement, sleep canvas
       if (totalEnergy < 0.25 && Math.abs(currentGx - targetGx) < 0.005) {
         isCanvasSleeping = true;
         animFrameId = null;
         return;
       }
 
-      animFrameId = requestAnimationFrame(drawLiquidWave);
+      animFrameId = window.requestAnimationFrame(drawLiquidWave);
     }
 
-    // Wake up canvas when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        wakeLiquid();
+    /* 5. Theme and Sound Helpers */
+    function applyTheme(theme) {
+      currentTheme = theme;
+      try { localStorage.setItem('cycle_theme', theme); } catch(e) {}
+      
+      let isDark = false;
+      if (theme === 'dark') {
+        isDark = true;
+      } else if (theme === 'light') {
+        isDark = false;
+      } else {
+        isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-    });
 
-    // Real Device Gyroscope / Accelerometer
-    function handleOrientation(e) {
-      if (e.gamma !== null && e.beta !== null) {
-        const tiltX = Math.max(-45, Math.min(45, e.gamma));
-        targetGx = tiltX / 45;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        if (themeSunIcon) themeSunIcon.classList.remove('hidden');
+        if (themeMoonIcon) themeMoonIcon.classList.add('hidden');
+        if (metaThemeColor) if (metaThemeColor && metaThemeColor.setAttribute) metaThemeColor.setAttribute('content', '#060a12');
+      } else {
+        document.documentElement.classList.remove('dark');
+        if (themeSunIcon) themeSunIcon.classList.add('hidden');
+        if (themeMoonIcon) themeMoonIcon.classList.remove('hidden');
+        if (metaThemeColor) if (metaThemeColor && metaThemeColor.setAttribute) metaThemeColor.setAttribute('content', '#f1f5f9');
+      }
+      wakeLiquid();
+    }
 
-        const tiltY = Math.max(10, Math.min(75, e.beta));
-        targetGy = tiltY / 45;
-        wakeLiquid();
+    function updateSoundIcon() {
+      if (soundEnabled) {
+        if (soundOnIcon) soundOnIcon.classList.remove('hidden');
+        if (soundOffIcon) soundOffIcon.classList.add('hidden');
+      } else {
+        if (soundOnIcon) soundOnIcon.classList.add('hidden');
+        if (soundOffIcon) soundOffIcon.classList.remove('hidden');
       }
     }
 
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', handleOrientation, true);
+    let audioCtx = null;
+    function playTactileFeedback(duration = 12) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(duration); } catch (e) {}
+      }
+
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.035);
+        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.035);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
     }
 
-    // Single unified pointer listener on heroCard (Fixed duplicate listener bug)
-    let isDragging = false;
-    let pointerStartX = 0;
-    let pointerStartY = 0;
-    let hasMovedHorizontally = false;
+    /* 6. Mode & Calculation Logic */
+    function formatClock(totalSec) {
+      if (totalSec <= 0 || isNaN(totalSec)) return '00:00:00';
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = Math.floor(totalSec % 60);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
 
-    heroCard.addEventListener('pointerdown', (e) => {
-      isDragging = true;
-      pointerStartX = e.clientX;
-      pointerStartY = e.clientY;
-      hasMovedHorizontally = false;
+    function setMode(mode) {
+      currentMode = mode;
+      try { localStorage.setItem('cycle_mode', mode); } catch(e) {}
+      playTactileFeedback(12);
+      triggerLiquidSplash(16);
 
-      const rect = heroCard.getBoundingClientRect();
-      const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-
-      targetGx = (clickRatio - 0.5) * 1.5;
-      triggerLiquidSplash(24, clickRatio);
-      spawnLiquidRipple(e, heroCard);
-      playTactileFeedback(14);
-
-      // Request iOS Orientation permission if necessary
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(permissionState => {
-          if (permissionState === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-          }
-        }).catch(() => {});
+      if (mode === 'standard') {
+        if (modeStandardBtn) modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
+        if (modeShiftBtn) modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
+        if (standardTimeSection) standardTimeSection.classList.remove('hidden');
+        if (shiftTimeSection) shiftTimeSection.classList.add('hidden');
+        if (timeLabel) timeLabel.textContent = "TOTAL TIME";
+      } else {
+        if (modeShiftBtn) modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
+        if (modeStandardBtn) modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
+        if (standardTimeSection) standardTimeSection.classList.add('hidden');
+        if (shiftTimeSection) shiftTimeSection.classList.remove('hidden');
+        if (timeLabel) timeLabel.textContent = "NET TIME";
       }
-    });
+      recalculate();
+    }
 
-    window.addEventListener('pointermove', (e) => {
-      if (isDragging) {
-        const deltaX = e.clientX - pointerStartX;
-        const deltaY = e.clientY - pointerStartY;
+    function updateUnitButton() {
+      if (unitToggleBtn) unitToggleBtn.textContent = unitPreference.toUpperCase();
+    }
 
-        // If movement is predominantly horizontal, tilt the liquid
-        if (Math.abs(deltaX) > Math.abs(deltaY) || hasMovedHorizontally) {
-          hasMovedHorizontally = true;
-          pointerStartX = e.clientX;
-          targetGx = Math.max(-1, Math.min(1, targetGx + deltaX * 0.015));
-          wakeLiquid();
+    function recalculate() {
+      const quantity = Math.max(0, parseFloat(qtyInput ? qtyInput.value : 0) || 0);
+      let totalSeconds = 0;
+
+      if (currentMode === 'standard') {
+        const hours = Math.max(0, parseFloat(hoursInput ? hoursInput.value : 0) || 0);
+        const mins = Math.max(0, parseFloat(minsInput ? minsInput.value : 0) || 0);
+        const secs = Math.max(0, parseFloat(secsInput ? secsInput.value : 0) || 0);
+        totalSeconds = (hours * 3600) + (mins * 60) + secs;
+      } else {
+        const downtimeMins = Math.max(0, parseFloat(downtimeInput ? downtimeInput.value : 0) || 0);
+        const downtimeSeconds = downtimeMins * 60;
+        totalSeconds = Math.max(0, SHIFT_SECONDS - downtimeSeconds);
+
+        const netH = Math.floor(totalSeconds / 3600);
+        const netM = Math.floor((totalSeconds % 3600) / 60);
+        if (netTimeDisplay) {
+          netTimeDisplay.textContent = `Net: ${String(netH).padStart(2, '0')}h ${String(netM).padStart(2, '0')}m`;
         }
       }
-    });
 
-    window.addEventListener('pointerup', () => {
-      isDragging = false;
-      hasMovedHorizontally = false;
-      if (!window.DeviceOrientationEvent) {
-        targetGx = 0;
+      if (totalTimeFormatted) {
+        totalTimeFormatted.textContent = formatClock(totalSeconds);
       }
+
+      if (quantity <= 0 || totalSeconds <= 0) {
+        if (cycleTimeMain) cycleTimeMain.textContent = '0.00';
+        if (cycleTimeUnit) cycleTimeUnit.textContent = 's / pc';
+        if (cycleTimeAlt) cycleTimeAlt.textContent = '≈ 0.00 min / pc';
+        if (pphValue) pphValue.textContent = '0';
+        return;
+      }
+
+      const cycleTimeSec = totalSeconds / quantity;
+      const cycleTimeMins = cycleTimeSec / 60;
+
+      let displayUnit = 'sec';
+      if (unitPreference === 'auto') {
+        displayUnit = cycleTimeSec >= 120 ? 'min' : 'sec';
+      } else {
+        displayUnit = unitPreference;
+      }
+
+      if (displayUnit === 'min') {
+        if (cycleTimeMain) {
+          cycleTimeMain.textContent = cycleTimeMins < 10 ? cycleTimeMins.toFixed(2) : cycleTimeMins.toFixed(1);
+        }
+        if (cycleTimeUnit) cycleTimeUnit.textContent = 'min / pc';
+        if (cycleTimeAlt) {
+          cycleTimeAlt.textContent = `≈ ${cycleTimeSec < 100 ? cycleTimeSec.toFixed(1) : Math.round(cycleTimeSec)} s / pc`;
+        }
+      } else {
+        if (cycleTimeMain) {
+          if (cycleTimeSec < 0.1) {
+            cycleTimeMain.textContent = cycleTimeSec.toFixed(3);
+          } else if (cycleTimeSec < 10) {
+            cycleTimeMain.textContent = cycleTimeSec.toFixed(2);
+          } else {
+            cycleTimeMain.textContent = cycleTimeSec.toFixed(1);
+          }
+        }
+        if (cycleTimeUnit) cycleTimeUnit.textContent = 's / pc';
+        if (cycleTimeAlt) {
+          cycleTimeAlt.textContent = `≈ ${cycleTimeMins.toFixed(2)} min / pc`;
+        }
+      }
+
+      const piecesPerHour = (quantity / totalSeconds) * 3600;
+      if (pphValue) {
+        pphValue.textContent = piecesPerHour >= 100 
+          ? Math.round(piecesPerHour).toLocaleString() 
+          : piecesPerHour.toFixed(1);
+      }
+    }
+
+    /* 7. Saved Runs Handling */
+    function saveRunsToStorage() {
+      try {
+        localStorage.setItem('cycle_saved_runs', JSON.stringify(savedRuns));
+      } catch (e) {}
+    }
+
+    function renderSavedRuns() {
+      if (!savedRecordsContainer || !savedCount || !recordsList) return;
+      if (savedRuns.length === 0) {
+        savedRecordsContainer.classList.add('hidden');
+        return;
+      }
+      savedRecordsContainer.classList.remove('hidden');
+      savedCount.textContent = savedRuns.length;
+      recordsList.innerHTML = '';
+
+      savedRuns.slice().reverse().forEach((run) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-xl bg-black/5 dark:bg-white/[0.04] text-xs font-mono group hover:bg-teal-500/10 transition-colors cursor-pointer';
+        item.innerHTML = `
+          <div class="flex-1 pr-2" data-load-run="${run.id}">
+            <div class="font-bold text-slate-800 dark:text-slate-200">${run.cycleTime}</div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400">${run.qty} pcs • ${run.pph} pcs/h • ${run.time}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 font-bold">${run.mode}</span>
+            <button type="button" data-delete-run="${run.id}" title="Delete" class="p-1 text-slate-400 hover:text-rose-500 tap-scale">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        `;
+
+        item.querySelector('[data-load-run]').addEventListener('click', () => {
+          loadRun(run);
+        });
+
+        item.querySelector('[data-delete-run]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteRun(run.id);
+        });
+
+        recordsList.appendChild(item);
+      });
+    }
+
+    function loadRun(run) {
+      playTactileFeedback(15);
+      if (run.mode === 'STD') {
+        setMode('standard');
+        if (qtyInput) qtyInput.value = run.qty;
+        if (run.rawSeconds) {
+          const totalSec = run.rawSeconds;
+          if (hoursInput) hoursInput.value = Math.floor(totalSec / 3600);
+          if (minsInput) minsInput.value = Math.floor((totalSec % 3600) / 60);
+          if (secsInput) secsInput.value = totalSec % 60;
+        }
+      } else {
+        setMode('shift');
+        if (qtyInput) qtyInput.value = run.qty;
+        if (run.rawDowntime !== undefined && downtimeInput) {
+          downtimeInput.value = run.rawDowntime;
+        }
+      }
+      recalculate();
+      showToast('Loaded Run');
+      triggerLiquidSplash(20);
+    }
+
+    function deleteRun(id) {
+      playTactileFeedback(10);
+      savedRuns = savedRuns.filter(r => r.id !== id);
+      saveRunsToStorage();
+      renderSavedRuns();
+      showToast('Run Removed');
+    }
+
+    /* 8. Event Listeners Wiring */
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, themeToggleBtn);
+        playTactileFeedback(15);
+        if (currentTheme === 'auto') {
+          applyTheme('dark');
+          showToast('Theme: Dark');
+        } else if (currentTheme === 'dark') {
+          applyTheme('light');
+          showToast('Theme: Light');
+        } else {
+          applyTheme('auto');
+          showToast('Theme: Auto');
+        }
+      });
+    }
+
+    if (window.matchMedia) {
+      const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+      themeMedia.addEventListener('change', () => {
+        if (currentTheme === 'auto') applyTheme('auto');
+      });
+    }
+
+    if (soundToggleBtn) {
+      soundToggleBtn.addEventListener('click', (e) => {
+        soundEnabled = !soundEnabled;
+        try { localStorage.setItem('cycle_sound', soundEnabled); } catch(e) {}
+        updateSoundIcon();
+        spawnLiquidRipple(e, soundToggleBtn);
+        playTactileFeedback(20);
+        showToast(soundEnabled ? 'Audio: On' : 'Audio: Muted');
+      });
+    }
+
+    if (modeStandardBtn) {
+      modeStandardBtn.addEventListener('click', () => setMode('standard'));
+    }
+
+    if (modeShiftBtn) {
+      modeShiftBtn.addEventListener('click', () => setMode('shift'));
+    }
+
+    if (unitToggleBtn) {
+      unitToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playTactileFeedback(12);
+        if (unitPreference === 'auto') unitPreference = 'sec';
+        else if (unitPreference === 'sec') unitPreference = 'min';
+        else unitPreference = 'auto';
+        
+        try { localStorage.setItem('cycle_unit_pref', unitPreference); } catch(e) {}
+        updateUnitButton();
+        recalculate();
+        showToast(`Unit: ${unitPreference.toUpperCase()}`);
+      });
+    }
+
+    // Input handlers
+    [qtyInput, hoursInput, minsInput, secsInput, downtimeInput].forEach((input) => {
+      if (!input) return;
+      input.addEventListener('focus', () => {
+        setTimeout(() => input.select(), 40);
+      });
+      input.addEventListener('input', () => {
+        triggerLiquidSplash(12, 0.5);
+        recalculate();
+      });
     });
 
-    // Liquid Touch Ripples on Interactive Elements
+    if (qtyMinusBtn && qtyInput) {
+      qtyMinusBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, qtyMinusBtn);
+        playTactileFeedback(10);
+        const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
+        qtyInput.value = Math.max(1, cur - 10);
+        triggerLiquidSplash(14, 0.4);
+        recalculate();
+      });
+    }
+
+    if (qtyPlusBtn && qtyInput) {
+      qtyPlusBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, qtyPlusBtn);
+        playTactileFeedback(10);
+        const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
+        qtyInput.value = cur + 10;
+        triggerLiquidSplash(14, 0.6);
+        recalculate();
+      });
+    }
+
+    if (dtMinusBtn && downtimeInput) {
+      dtMinusBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, dtMinusBtn);
+        playTactileFeedback(10);
+        const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
+        downtimeInput.value = Math.max(0, cur - 5);
+        triggerLiquidSplash(14, 0.4);
+        recalculate();
+      });
+    }
+
+    if (dtPlusBtn && downtimeInput) {
+      dtPlusBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, dtPlusBtn);
+        playTactileFeedback(10);
+        const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
+        downtimeInput.value = Math.min(660, cur + 5);
+        triggerLiquidSplash(14, 0.6);
+        recalculate();
+      });
+    }
+
+    document.querySelectorAll('[data-add-qty]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(16, 0.5);
+        playTactileFeedback(12);
+        const addVal = parseInt(e.currentTarget.getAttribute('data-add-qty'), 10);
+        const current = parseInt(qtyInput.value, 10) || 0;
+        qtyInput.value = current + addVal;
+        recalculate();
+      });
+    });
+
+    document.querySelectorAll('[data-preset-time]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(12);
+        const preset = e.currentTarget.getAttribute('data-preset-time');
+        if (preset === '15m') {
+          hoursInput.value = 0; minsInput.value = 15; secsInput.value = 0;
+        } else if (preset === '30m') {
+          hoursInput.value = 0; minsInput.value = 30; secsInput.value = 0;
+        } else if (preset === '1h') {
+          hoursInput.value = 1; minsInput.value = 0; secsInput.value = 0;
+        } else if (preset === '8h') {
+          hoursInput.value = 8; minsInput.value = 0; secsInput.value = 0;
+        }
+        recalculate();
+      });
+    });
+
+    document.querySelectorAll('[data-preset-dt]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(12);
+        downtimeInput.value = e.currentTarget.getAttribute('data-preset-dt');
+        recalculate();
+      });
+    });
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, resetBtn);
+        triggerLiquidSplash(22);
+        playTactileFeedback(20);
+        if (currentMode === 'standard') {
+          if (qtyInput) qtyInput.value = 100;
+          if (hoursInput) hoursInput.value = 0;
+          if (minsInput) minsInput.value = 30;
+          if (secsInput) secsInput.value = 0;
+        } else {
+          if (qtyInput) qtyInput.value = 500;
+          if (downtimeInput) downtimeInput.value = 30;
+        }
+        recalculate();
+        showToast('Reset');
+      });
+    }
+
+    if (saveRecordBtn) {
+      saveRecordBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, saveRecordBtn);
+        triggerLiquidSplash(18);
+        playTactileFeedback(18);
+
+        const newRun = {
+          id: Date.now(),
+          cycleTime: `${cycleTimeMain ? cycleTimeMain.textContent : '0'} ${cycleTimeUnit ? cycleTimeUnit.textContent : 's/pc'}`,
+          qty: qtyInput ? qtyInput.value || '0' : '0',
+          pph: pphValue ? pphValue.textContent : '0',
+          time: totalTimeFormatted ? totalTimeFormatted.textContent : '00:00:00',
+          mode: currentMode === 'standard' ? 'STD' : '11H',
+          rawSeconds: currentMode === 'standard' 
+            ? ((parseFloat(hoursInput.value) || 0) * 3600 + (parseFloat(minsInput.value) || 0) * 60 + (parseFloat(secsInput.value) || 0))
+            : null,
+          rawDowntime: currentMode === 'shift' ? parseFloat(downtimeInput.value) || 0 : null
+        };
+
+        savedRuns.push(newRun);
+        saveRunsToStorage();
+        renderSavedRuns();
+        showToast('Run Saved');
+      });
+    }
+
+    if (clearRecordsBtn) {
+      clearRecordsBtn.addEventListener('click', () => {
+        if (savedRuns.length === 0) return;
+        playTactileFeedback(20);
+        savedRuns = [];
+        saveRunsToStorage();
+        renderSavedRuns();
+        showToast('All Cleared');
+      });
+    }
+
+    function getCalculationSummary() {
+      const q = qtyInput ? qtyInput.value || '0' : '0';
+      const cTime = `${cycleTimeMain ? cycleTimeMain.textContent : '0'} ${cycleTimeUnit ? cycleTimeUnit.textContent : 's/pc'}`;
+      const pph = pphValue ? pphValue.textContent : '0';
+      const tot = totalTimeFormatted ? totalTimeFormatted.textContent : '00:00:00';
+
+      if (currentMode === 'standard') {
+        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Total Time: ${tot}\n🔢 Quantity: ${q} pcs\n(Mode: Standard)`;
+      } else {
+        const dt = downtimeInput ? downtimeInput.value || '0' : '0';
+        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Net Time: ${tot} (Shift: 11h, DT: ${dt}m)\n🔢 Quantity: ${q} pcs\n(Mode: 11H Shift)`;
+      }
+    }
+
+    async function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (err) {}
+      }
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = text;
+      tempTextArea.style.position = 'fixed';
+      tempTextArea.style.top = '-9999px';
+      tempTextArea.style.opacity = '0';
+      document.body.appendChild(tempTextArea);
+      tempTextArea.focus();
+      tempTextArea.select();
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        success = false;
+      }
+      document.body.removeChild(tempTextArea);
+      return success;
+    }
+
+    if (copyResultBtn) {
+      copyResultBtn.addEventListener('click', async (e) => {
+        spawnLiquidRipple(e, copyResultBtn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(12);
+        const text = getCalculationSummary();
+        const ok = await copyToClipboard(text);
+        showToast(ok ? 'Copied to Clipboard' : 'Copy Failed');
+      });
+    }
+
+    if (shareResultBtn) {
+      shareResultBtn.addEventListener('click', async (e) => {
+        spawnLiquidRipple(e, shareResultBtn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(14);
+        const text = getCalculationSummary();
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Cycle Time Calculation',
+              text: text
+            });
+            showToast('Shared');
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              await copyToClipboard(text);
+              showToast('Copied to Clipboard');
+            }
+          }
+        } else {
+          await copyToClipboard(text);
+          showToast('Copied to Clipboard');
+        }
+      });
+    }
+
+    function showToast(text) {
+      if (!toastMessage) return;
+      toastMessage.textContent = text;
+      toastMessage.classList.remove('hidden');
+      setTimeout(() => {
+        toastMessage.classList.add('hidden');
+      }, 1800);
+    }
+
     function spawnLiquidRipple(e, target = e.currentTarget) {
       if (!target) return;
       const rect = target.getBoundingClientRect();
@@ -1327,325 +1546,145 @@
       setTimeout(() => ripple.remove(), 650);
     }
 
-    // Format digital clock HH:MM:SS
-    function formatClock(totalSec) {
-      if (totalSec <= 0 || isNaN(totalSec)) return '00:00:00';
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = Math.floor(totalSec % 60);
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${pad(h)}:${pad(m)}:${pad(s)}`;
-    }
+    // Pointer events on heroCard
+    let isDragging = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let hasMovedHorizontally = false;
 
-    function setMode(mode) {
-      currentMode = mode;
-      localStorage.setItem('cycle_mode', mode);
-      playTactileFeedback(12);
-      triggerLiquidSplash(16);
+    if (heroCard) {
+      heroCard.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        hasMovedHorizontally = false;
 
-      if (mode === 'standard') {
-        modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
-        modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
-        standardTimeSection.classList.remove('hidden');
-        shiftTimeSection.classList.add('hidden');
-        timeLabel.textContent = "TOTAL TIME";
-      } else {
-        modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
-        modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
-        standardTimeSection.classList.add('hidden');
-        shiftTimeSection.classList.remove('hidden');
-        timeLabel.textContent = "NET TIME";
-      }
-      recalculate();
-    }
+        const rect = heroCard.getBoundingClientRect();
+        const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 
-    modeStandardBtn.addEventListener('click', () => setMode('standard'));
-    modeShiftBtn.addEventListener('click', () => setMode('shift'));
+        targetGx = (clickRatio - 0.5) * 1.5;
+        triggerLiquidSplash(24, clickRatio);
+        spawnLiquidRipple(e, heroCard);
+        playTactileFeedback(14);
 
-    // Unit Preference Toggle: Auto -> Seconds -> Minutes -> Auto
-    function updateUnitButton() {
-      unitToggleBtn.textContent = unitPreference.toUpperCase();
-    }
-    updateUnitButton();
-
-    unitToggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playTactileFeedback(12);
-      if (unitPreference === 'auto') unitPreference = 'sec';
-      else if (unitPreference === 'sec') unitPreference = 'min';
-      else unitPreference = 'auto';
-      
-      localStorage.setItem('cycle_unit_pref', unitPreference);
-      updateUnitButton();
-      recalculate();
-      showToast(`Unit: ${unitPreference.toUpperCase()}`);
-    });
-
-    // Calculation Logic
-    function recalculate() {
-      const quantity = Math.max(0, parseFloat(qtyInput.value) || 0);
-      let totalSeconds = 0;
-
-      if (currentMode === 'standard') {
-        const hours = Math.max(0, parseFloat(hoursInput.value) || 0);
-        const mins = Math.max(0, parseFloat(minsInput.value) || 0);
-        const secs = Math.max(0, parseFloat(secsInput.value) || 0);
-        totalSeconds = (hours * 3600) + (mins * 60) + secs;
-      } else {
-        const downtimeMins = Math.max(0, parseFloat(downtimeInput.value) || 0);
-        const downtimeSeconds = downtimeMins * 60;
-        totalSeconds = Math.max(0, SHIFT_SECONDS - downtimeSeconds);
-
-        const netH = Math.floor(totalSeconds / 3600);
-        const netM = Math.floor((totalSeconds % 3600) / 60);
-        netTimeDisplay.textContent = `Net: ${String(netH).padStart(2, '0')}h ${String(netM).padStart(2, '0')}m`;
-      }
-
-      totalTimeFormatted.textContent = formatClock(totalSeconds);
-
-      if (quantity <= 0 || totalSeconds <= 0) {
-        cycleTimeMain.textContent = '0.00';
-        cycleTimeUnit.textContent = 's / pc';
-        cycleTimeAlt.textContent = '≈ 0.00 min / pc';
-        pphValue.textContent = '0';
-        return;
-      }
-
-      const cycleTimeSec = totalSeconds / quantity;
-      const cycleTimeMins = cycleTimeSec / 60;
-
-      // Determine display unit based on preference
-      let displayUnit = 'sec';
-      if (unitPreference === 'auto') {
-        displayUnit = cycleTimeSec >= 120 ? 'min' : 'sec';
-      } else {
-        displayUnit = unitPreference;
-      }
-
-      if (displayUnit === 'min') {
-        cycleTimeMain.textContent = cycleTimeMins < 10 ? cycleTimeMins.toFixed(2) : cycleTimeMins.toFixed(1);
-        cycleTimeUnit.textContent = 'min / pc';
-        cycleTimeAlt.textContent = `≈ ${cycleTimeSec < 100 ? cycleTimeSec.toFixed(1) : Math.round(cycleTimeSec)} s / pc`;
-      } else {
-        if (cycleTimeSec < 0.1) {
-          cycleTimeMain.textContent = cycleTimeSec.toFixed(3);
-        } else if (cycleTimeSec < 10) {
-          cycleTimeMain.textContent = cycleTimeSec.toFixed(2);
-        } else {
-          cycleTimeMain.textContent = cycleTimeSec.toFixed(1);
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          DeviceOrientationEvent.requestPermission().then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+          }).catch(() => {});
         }
-        cycleTimeUnit.textContent = 's / pc';
-        cycleTimeAlt.textContent = `≈ ${cycleTimeMins.toFixed(2)} min / pc`;
-      }
-
-      const piecesPerHour = (quantity / totalSeconds) * 3600;
-      pphValue.textContent = piecesPerHour >= 100 
-        ? Math.round(piecesPerHour).toLocaleString() 
-        : piecesPerHour.toFixed(1);
+      });
     }
 
-    // Input handlers with smooth touch highlight
-    [qtyInput, hoursInput, minsInput, secsInput, downtimeInput].forEach((input) => {
-      input.addEventListener('focus', () => {
-        setTimeout(() => input.select(), 40);
-      });
-      input.addEventListener('input', () => {
-        triggerLiquidSplash(12, 0.5);
-        recalculate();
-      });
-    });
+    window.addEventListener('pointermove', (e) => {
+      if (isDragging) {
+        const deltaX = e.clientX - pointerStartX;
+        const deltaY = e.clientY - pointerStartY;
 
-    // Mobile Stepper Buttons (+ and - buttons)
-    qtyMinusBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, qtyMinusBtn);
-      playTactileFeedback(10);
-      const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
-      qtyInput.value = Math.max(1, cur - 10);
-      triggerLiquidSplash(14, 0.4);
-      recalculate();
-    });
-
-    qtyPlusBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, qtyPlusBtn);
-      playTactileFeedback(10);
-      const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
-      qtyInput.value = cur + 10;
-      triggerLiquidSplash(14, 0.6);
-      recalculate();
-    });
-
-    dtMinusBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, dtMinusBtn);
-      playTactileFeedback(10);
-      const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
-      downtimeInput.value = Math.max(0, cur - 5);
-      triggerLiquidSplash(14, 0.4);
-      recalculate();
-    });
-
-    dtPlusBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, dtPlusBtn);
-      playTactileFeedback(10);
-      const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
-      downtimeInput.value = Math.min(660, cur + 5);
-      triggerLiquidSplash(14, 0.6);
-      recalculate();
-    });
-
-    // Quantity Quick Increment Chips
-    document.querySelectorAll('[data-add-qty]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        spawnLiquidRipple(e, btn);
-        triggerLiquidSplash(16, 0.5);
-        playTactileFeedback(12);
-        const addVal = parseInt(e.currentTarget.getAttribute('data-add-qty'), 10);
-        const current = parseInt(qtyInput.value, 10) || 0;
-        qtyInput.value = current + addVal;
-        recalculate();
-      });
-    });
-
-    // Time Presets (Standard Mode)
-    document.querySelectorAll('[data-preset-time]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        spawnLiquidRipple(e, btn);
-        triggerLiquidSplash(14);
-        playTactileFeedback(12);
-        const preset = e.currentTarget.getAttribute('data-preset-time');
-        if (preset === '15m') {
-          hoursInput.value = 0; minsInput.value = 15; secsInput.value = 0;
-        } else if (preset === '30m') {
-          hoursInput.value = 0; minsInput.value = 30; secsInput.value = 0;
-        } else if (preset === '1h') {
-          hoursInput.value = 1; minsInput.value = 0; secsInput.value = 0;
-        } else if (preset === '8h') {
-          hoursInput.value = 8; minsInput.value = 0; secsInput.value = 0;
+        if (Math.abs(deltaX) > Math.abs(deltaY) || hasMovedHorizontally) {
+          hasMovedHorizontally = true;
+          pointerStartX = e.clientX;
+          targetGx = Math.max(-1, Math.min(1, targetGx + deltaX * 0.015));
+          wakeLiquid();
         }
-        recalculate();
-      });
+      }
     });
 
-    // Downtime Presets (11H Shift Mode)
-    document.querySelectorAll('[data-preset-dt]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        spawnLiquidRipple(e, btn);
-        triggerLiquidSplash(14);
+    window.addEventListener('pointerup', () => {
+      isDragging = false;
+      hasMovedHorizontally = false;
+      if (!window.DeviceOrientationEvent) {
+        targetGx = 0;
+      }
+    });
+
+    function handleOrientation(e) {
+      if (e.gamma !== null && e.beta !== null) {
+        const tiltX = Math.max(-45, Math.min(45, e.gamma));
+        targetGx = tiltX / 45;
+        const tiltY = Math.max(10, Math.min(75, e.beta));
+        targetGy = tiltY / 45;
+        wakeLiquid();
+      }
+    }
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        wakeLiquid();
+      }
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Standalone PWA checks
+    const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator && window.navigator.standalone === true);
+    if (isStandalone && installBtnText && installAppBtn) {
+      installBtnText.textContent = 'INSTALLED';
+      installAppBtn.classList.add('opacity-75');
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (promptInstallAction) promptInstallAction.classList.remove('hidden');
+      if (installBtnText) installBtnText.textContent = 'INSTALL';
+    });
+
+    if (installAppBtn && installModal) {
+      installAppBtn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, installAppBtn);
         playTactileFeedback(12);
-        downtimeInput.value = e.currentTarget.getAttribute('data-preset-dt');
-        recalculate();
+        installModal.classList.remove('hidden');
       });
-    });
-
-    // Reset
-    resetBtn.addEventListener('click', (e) => {
-      spawnLiquidRipple(e, resetBtn);
-      triggerLiquidSplash(22);
-      playTactileFeedback(20);
-      if (currentMode === 'standard') {
-        qtyInput.value = 100;
-        hoursInput.value = 0;
-        minsInput.value = 30;
-        secsInput.value = 0;
-      } else {
-        qtyInput.value = 500;
-        downtimeInput.value = 30;
-      }
-      recalculate();
-      showToast('Reset');
-    });
-
-    // Summary Text Generator
-    function getCalculationSummary() {
-      const q = qtyInput.value || '0';
-      const cTime = `${cycleTimeMain.textContent} ${cycleTimeUnit.textContent}`;
-      const pph = pphValue.textContent;
-      const tot = totalTimeFormatted.textContent;
-
-      if (currentMode === 'standard') {
-        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Total Time: ${tot}\n🔢 Quantity: ${q} pcs\n(Mode: Standard)`;
-      } else {
-        const dt = downtimeInput.value || '0';
-        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Net Time: ${tot} (Shift: 11h, DT: ${dt}m)\n🔢 Quantity: ${q} pcs\n(Mode: 11H Shift)`;
-      }
     }
 
-    // Modern Asynchronous Clipboard Helper
-    async function copyToClipboard(text) {
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(text);
-          return true;
-        } catch (err) {}
-      }
-      // Fallback
-      const tempTextArea = document.createElement('textarea');
-      tempTextArea.value = text;
-      tempTextArea.style.position = 'fixed';
-      tempTextArea.style.top = '-9999px';
-      tempTextArea.style.opacity = '0';
-      document.body.appendChild(tempTextArea);
-      tempTextArea.focus();
-      tempTextArea.select();
-      let success = false;
-      try {
-        success = document.execCommand('copy');
-      } catch (err) {
-        success = false;
-      }
-      document.body.removeChild(tempTextArea);
-      return success;
+    if (closeInstallModal && installModal) {
+      closeInstallModal.addEventListener('click', () => {
+        installModal.classList.add('hidden');
+      });
     }
 
-    // Copy Metrics
-    copyResultBtn.addEventListener('click', async (e) => {
-      spawnLiquidRipple(e, copyResultBtn);
-      triggerLiquidSplash(14);
-      playTactileFeedback(12);
-      const text = getCalculationSummary();
-      const ok = await copyToClipboard(text);
-      showToast(ok ? 'Copied to Clipboard' : 'Copy Failed');
-    });
+    if (installModal) {
+      installModal.addEventListener('click', (e) => {
+        if (e.target === installModal) installModal.classList.add('hidden');
+      });
+    }
 
-    // Native Mobile Share
-    shareResultBtn.addEventListener('click', async (e) => {
-      spawnLiquidRipple(e, shareResultBtn);
-      triggerLiquidSplash(14);
-      playTactileFeedback(14);
-      const text = getCalculationSummary();
-
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Cycle Time Calculation',
-            text: text
-          });
-          showToast('Shared');
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            await copyToClipboard(text);
-            showToast('Copied to Clipboard');
+    if (nativeInstallTrigger) {
+      nativeInstallTrigger.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            showToast('App Installed');
+            if (installModal) installModal.classList.add('hidden');
           }
+          deferredPrompt = null;
         }
-      } else {
-        await copyToClipboard(text);
-        showToast('Copied to Clipboard');
-      }
-    });
-
-    function showToast(text) {
-      toastMessage.textContent = text;
-      toastMessage.classList.remove('hidden');
-      setTimeout(() => {
-        toastMessage.classList.add('hidden');
-      }, 1800);
+      });
     }
 
-    // Initialize App
-    window.addEventListener('DOMContentLoaded', () => {
+    /* 9. Unified App Startup */
+    function initApp() {
+      applyTheme(currentTheme);
+      updateSoundIcon();
+      updateUnitButton();
       setMode(currentMode);
       renderSavedRuns();
+      resizeCanvas();
       recalculate();
-    });
-  </script>
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+</script>
 </body>
 </html>
