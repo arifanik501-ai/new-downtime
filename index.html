@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+  <title>Industrial Cycle Time Calculator</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Mobile App / PWA Capabilities -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cycle Time">
+  <meta name="theme-color" content="#060a12" id="metaThemeColor">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23060a12'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%2300f5d4' opacity='0.15'/%3E%3Ccircle cx='256' cy='256' r='140' stroke='%2300f5d4' stroke-width='24' fill='none' stroke-dasharray='16 8'/%3E%3Cpath d='M256 150v106l72 72' stroke='%2300bbf9' stroke-width='28' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='256' cy='256' r='16' fill='%2300f5d4'/%3E%3C/svg%3E">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              teal: '#00f5d4',
+              cyan: '#00bbf9',
+              blue: '#1d4ed8',
+              slate: '#0a0f1d',
+            }
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Safe Area and Mobile Ergonomics */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+    
+    html, body {
+      touch-action: manipulation;
+      overscroll-behavior-y: contain;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 100%;
+      min-height: -webkit-fill-available;
+    }
+
+    .mobile-safe-container {
+      padding-top: max(0.875rem, var(--sat));
+      padding-bottom: max(1.25rem, var(--sab));
+      padding-left: max(0.875rem, var(--sal));
+      padding-right: max(0.875rem, var(--sar));
+    }
+
+    /* Animations */
+    @keyframes liquidFloatA {
+      0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%; }
+      33% { transform: translate(25px, -30px) scale(1.12) rotate(45deg); border-radius: 70% 30% 46% 54% / 30% 29% 71% 70%; }
+      66% { transform: translate(-20px, 20px) scale(0.92) rotate(-30deg); border-radius: 30% 70% 70% 30% / 50% 60% 40% 50%; }
+    }
+    @keyframes liquidFloatB {
+      0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+      33% { transform: translate(-30px, 35px) scale(1.15) rotate(-60deg); border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+      66% { transform: translate(25px, -25px) scale(0.9) rotate(40deg); border-radius: 65% 35% 40% 60% / 35% 55% 45% 65%; }
+    }
+    @keyframes liquidShimmer {
+      0% { transform: translateX(-120%) skewX(-20deg); }
+      100% { transform: translateX(220%) skewX(-20deg); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.55; transform: scale(1); filter: blur(28px); }
+      50% { opacity: 0.85; transform: scale(1.06); filter: blur(34px); }
+    }
+
+    .liquid-blob-1 { animation: liquidFloatA 16s ease-in-out infinite; will-change: transform; }
+    .liquid-blob-2 { animation: liquidFloatB 20s ease-in-out infinite; will-change: transform; }
+    .liquid-blob-3 { animation: liquidFloatA 22s ease-in-out infinite reverse; will-change: transform; }
+    .hero-glow { animation: pulseGlow 4s ease-in-out infinite; }
+
+    .liquid-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .liquid-shimmer::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 0;
+      width: 60%;
+      height: 200%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+      animation: liquidShimmer 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      pointer-events: none;
+    }
+    .dark .liquid-shimmer::after {
+      background: linear-gradient(90deg, transparent, rgba(0, 245, 212, 0.12), transparent);
+    }
+
+    /* Auto Light & Dark Glass Surface */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+    }
+    .dark .glass-panel {
+      background: rgba(16, 24, 40, 0.65);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.55),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.16),
+                  inset 0 -1px 2px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .glass-panel-interactive {
+      background: rgba(241, 245, 249, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(203, 213, 225, 0.65);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-panel-interactive:focus-within {
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba(13, 148, 136, 0.65);
+      box-shadow: 0 0 20px -3px rgba(13, 148, 136, 0.25);
+    }
+    .dark .glass-panel-interactive {
+      background: rgba(18, 28, 48, 0.5);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+    .dark .glass-panel-interactive:focus-within {
+      background: rgba(22, 36, 62, 0.8);
+      border-color: rgba(0, 245, 212, 0.55);
+      box-shadow: 0 0 25px -4px rgba(0, 245, 212, 0.3),
+                  inset 0 1px 2px rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-card-hero {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 253, 250, 0.8) 100%);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(13, 148, 136, 0.35);
+      box-shadow: 0 16px 36px -10px rgba(13, 148, 136, 0.15),
+                  inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.9);
+      touch-action: pan-y;
+    }
+    .dark .glass-card-hero {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1px solid rgba(0, 245, 212, 0.28);
+      box-shadow: 0 25px 60px -15px rgba(0, 245, 212, 0.15),
+                  0 12px 24px -10px rgba(0, 0, 0, 0.8),
+                  inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.35);
+      touch-action: pan-y;
+    }
+
+    /* Hide standard input spin arrows & mobile font scale */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    input, select, button {
+      font-size: 16px; /* Prevents auto-zoom in iOS Safari */
+    }
+
+    .tap-scale {
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .tap-scale:active {
+      transform: scale(0.93) translateY(1px);
+      opacity: 0.85;
+    }
+
+    /* Liquid Touch Ripple */
+    .liquid-ripple {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: scale(0);
+      animation: liquidRippleAnim 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+      background: radial-gradient(circle, rgba(0, 245, 212, 0.4) 0%, rgba(0, 187, 249, 0.15) 55%, transparent 70%);
+      z-index: 30;
+    }
+    @keyframes liquidRippleAnim {
+      0% { transform: scale(0); opacity: 0.85; }
+      100% { transform: scale(3.2); opacity: 0; }
+    }
+
+    /* Custom scroll for saved records */
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(0, 245, 212, 0.25);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-[#060a12] text-slate-800 dark:text-slate-100 min-h-screen flex justify-center selection:bg-cyan-500/30 font-sans antialiased overflow-x-hidden transition-colors duration-300">
+
+  <!-- SVG Filter for Liquid Goo Blending -->
+  <svg class="sr-only" aria-hidden="true">
+    <defs>
+      <filter id="liquidGoo">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="
+          1 0 0 0 0  
+          0 1 0 0 0  
+          0 0 1 0 0  
+          0 0 0 22 -9" result="goo" />
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Ambient Liquid Glow Elements with Organic Goo Morphing -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0" style="filter: url(#liquidGoo);">
+    <div class="absolute -top-24 -left-16 w-80 h-80 rounded-full bg-gradient-to-tr from-cyan-400/30 to-teal-300/25 dark:from-cyan-500/35 dark:to-teal-400/25 blur-2xl liquid-blob-1"></div>
+    <div class="absolute top-1/3 -right-24 w-88 h-88 rounded-full bg-gradient-to-bl from-blue-400/25 to-teal-400/20 dark:from-blue-600/35 dark:to-cyan-400/25 blur-2xl liquid-blob-2"></div>
+    <div class="absolute -bottom-20 left-1/4 w-96 h-96 rounded-full bg-gradient-to-t from-teal-400/25 to-blue-400/20 dark:from-teal-500/25 dark:to-blue-700/25 blur-2xl liquid-blob-3"></div>
+  </div>
+  
+  <!-- Subtle Industrial Grid Overlay -->
+  <div class="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.04] bg-[radial-gradient(#0f172a_1px,transparent_1px)] dark:bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px]"></div>
+
+  <!-- Main Mobile Container -->
+  <div class="relative z-10 w-full max-w-[440px] min-h-screen mobile-safe-container flex flex-col justify-between">
+    
+    <!-- Clean Ergonomic Header -->
+    <header class="mb-2.5">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <div class="flex items-center justify-center w-9 h-9 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white dark:text-[#060a12] shadow-[0_0_15px_rgba(0,245,212,0.3)] shrink-0">
+            <svg class="w-5 h-5 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-sm font-bold tracking-wider uppercase text-slate-800 dark:text-white leading-tight">CYCLE TIME</h1>
+            <div class="text-[10px] font-mono text-teal-600 dark:text-teal-400">INDUSTRIAL CALC</div>
+          </div>
+        </div>
+
+        <!-- Header Action Controls (Min 40px Touch Targets) -->
+        <div class="flex items-center gap-1.5">
+          <!-- Theme Toggle (Auto / Dark / Light) -->
+          <button id="themeToggleBtn" title="Switch Theme" aria-label="Switch Theme" class="tap-scale flex items-center justify-center w-10 h-10 rounded-2xl glass-panel text-slate-600 dark:text-slate-300 hover:text-teal-500 transition-colors">
+            <!-- Sun Icon (shown in dark mode) -->
+            <svg id="themeSunIcon" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <!-- Moon Icon (shown in light mode) -->
+            <svg id="themeMoonIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+
+          <!-- Audio/Haptic Mute Toggle -->
+          <button id="soundToggleBtn" title="Toggle Sound" aria-label="Toggle Sound" class="tap-scale flex items-center justify-center w-10 h-10 rounded-2xl glass-panel text-slate-600 dark:text-slate-300 hover:text-teal-500 transition-colors">
+            <svg id="soundOnIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" />
+            </svg>
+            <svg id="soundOffIcon" class="w-4 h-4 hidden text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+          </button>
+
+          <!-- Quick Reset Button -->
+          <button id="resetBtn" title="Reset Values" aria-label="Reset Values" class="tap-scale flex items-center justify-center w-10 h-10 rounded-2xl glass-panel text-slate-600 dark:text-slate-300 hover:text-rose-500 transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+
+          <!-- Save App / Install PWA Button -->
+          <button id="installAppBtn" title="Install App" class="tap-scale flex items-center gap-1.5 px-3 h-10 rounded-2xl bg-teal-500/15 dark:bg-teal-400/20 border border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-500/25 transition-all text-xs font-mono font-semibold">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span id="installBtnText">APP</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode Switcher (Min 42px touch height) -->
+      <div class="mt-2.5 p-1 rounded-2xl glass-panel flex items-center gap-1">
+        <button id="modeStandardBtn" type="button" class="tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30">
+          STANDARD
+        </button>
+        <button id="modeShiftBtn" type="button" class="tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent">
+          11H SHIFT
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Container with Proper Structural Tag -->
+    <main class="flex-1 flex flex-col space-y-3 my-1">
+
+      <!-- Hero Display: Cycle Time Per Piece with Interactive Liquid Wave Canvas -->
+      <section id="heroCard" class="relative rounded-3xl p-5 sm:p-6 glass-card-hero liquid-shimmer overflow-hidden cursor-pointer select-none">
+        <!-- Interactive Liquid Canvas Wave Layer -->
+        <canvas id="liquidCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-55 dark:opacity-45"></canvas>
+
+        <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-52 h-32 bg-cyan-400/25 blur-2xl hero-glow pointer-events-none rounded-full"></div>
+        
+        <div class="relative z-10 flex flex-col items-center text-center">
+          <!-- Unit preference toggle pill -->
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-[11px] font-mono font-semibold tracking-widest text-teal-600 dark:text-teal-300 uppercase">CYCLE TIME / PIECE</span>
+            <button id="unitToggleBtn" type="button" title="Tap to toggle unit" class="tap-scale px-1.5 py-0.5 rounded-md bg-teal-500/15 border border-teal-500/30 text-[9px] font-mono text-teal-700 dark:text-teal-300 font-bold uppercase">
+              AUTO
+            </button>
+          </div>
+
+          <div class="my-1 flex items-baseline justify-center gap-2 flex-wrap">
+            <div id="cycleTimeMain" class="text-5xl sm:text-6xl font-extrabold font-mono tracking-tighter text-slate-900 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-b dark:from-white dark:via-slate-100 dark:to-slate-300 drop-shadow-sm transition-transform duration-200">
+              0.00
+            </div>
+            <span id="cycleTimeUnit" class="text-lg font-mono font-semibold text-teal-600 dark:text-teal-400 tracking-tight">s / pc</span>
+          </div>
+
+          <!-- Secondary Unit Equivalent (e.g. shows minutes when seconds active, or vice-versa) -->
+          <div id="cycleTimeAlt" class="text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 tracking-wide mt-0.5">
+            ≈ 0.00 min / pc
+          </div>
+        </div>
+
+        <div class="absolute bottom-0 inset-x-8 h-[1px] bg-gradient-to-r from-transparent via-teal-500/40 dark:via-teal-400/50 to-transparent"></div>
+      </section>
+
+      <!-- Secondary KPI Grid -->
+      <section class="grid grid-cols-2 gap-2.5">
+        <!-- Pieces Per Hour (Throughput) -->
+        <div class="glass-panel rounded-2xl p-3 flex flex-col justify-between">
+          <span class="text-[10px] font-mono font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">PIECES / HOUR</span>
+          <div class="mt-1.5">
+            <div id="pphValue" class="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white tracking-tight truncate">0</div>
+            <div class="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">pcs / h</div>
+          </div>
+        </div>
+
+        <!-- Total Production Time / Net Time -->
+        <div class="glass-panel rounded-2xl p-3 flex flex-col justify-between">
+          <span id="timeLabel" class="text-[10px] font-mono font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">TOTAL TIME</span>
+          <div class="mt-1.5">
+            <div id="totalTimeFormatted" class="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white tracking-tight truncate">00:00:00</div>
+            <div class="text-[10px] font-mono text-teal-600 dark:text-teal-400 mt-0.5">hh:mm:ss</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inputs Container -->
+      <section class="glass-panel rounded-3xl p-3.5 sm:p-4 space-y-3.5">
+
+        <!-- Input 1: Production Quantity with Mobile Steppers -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between px-1">
+            <label for="qtyInput" class="text-xs font-semibold tracking-wide text-slate-700 dark:text-slate-200 uppercase">
+              Production Quantity (pcs)
+            </label>
+            <span class="text-[10px] font-mono text-slate-400">Required</span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <!-- Single-touch decrement stepper button -->
+            <button type="button" id="qtyMinusBtn" title="Decrease 10" aria-label="Decrease 10" class="tap-scale w-11 h-11 flex items-center justify-center rounded-2xl glass-panel-interactive text-slate-700 dark:text-slate-200 font-bold text-lg border border-black/5 dark:border-white/10 shrink-0">
+              −
+            </button>
+
+            <div class="relative flex-1 glass-panel-interactive rounded-2xl flex items-center px-3.5 py-1.5">
+              <input 
+                id="qtyInput" 
+                type="number" 
+                min="1" 
+                step="1" 
+                inputmode="numeric" 
+                pattern="[0-9]*"
+                autocomplete="off"
+                placeholder="0" 
+                value="100" 
+                class="w-full bg-transparent text-xl font-mono font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 tracking-tight"
+              />
+              <span class="text-xs font-mono font-semibold text-slate-400 uppercase ml-2 select-none">PCS</span>
+            </div>
+
+            <!-- Single-touch increment stepper button -->
+            <button type="button" id="qtyPlusBtn" title="Increase 10" aria-label="Increase 10" class="tap-scale w-11 h-11 flex items-center justify-center rounded-2xl glass-panel-interactive text-slate-700 dark:text-slate-200 font-bold text-lg border border-black/5 dark:border-white/10 shrink-0">
+              +
+            </button>
+          </div>
+
+          <!-- Quick Increment Buttons (min 38px touch target height) -->
+          <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+            <button type="button" data-add-qty="10" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              +10
+            </button>
+            <button type="button" data-add-qty="50" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              +50
+            </button>
+            <button type="button" data-add-qty="100" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              +100
+            </button>
+            <button type="button" data-add-qty="500" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              +500
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 1: Standard Time Input -->
+        <div id="standardTimeSection" class="space-y-1.5 pt-0.5">
+          <label class="text-xs font-semibold tracking-wide text-slate-700 dark:text-slate-200 uppercase px-1 block">
+            Total Production Time
+          </label>
+
+          <!-- Time Input Triple Segment -->
+          <div class="grid grid-cols-3 gap-2">
+            <div class="glass-panel-interactive rounded-2xl p-2 flex flex-col items-center">
+              <span class="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-0.5">HOURS</span>
+              <input 
+                id="hoursInput" 
+                type="number" 
+                min="0" 
+                max="999" 
+                inputmode="numeric" 
+                pattern="[0-9]*"
+                autocomplete="off"
+                placeholder="0" 
+                value="0" 
+                class="w-full text-center bg-transparent text-xl font-mono font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+
+            <div class="glass-panel-interactive rounded-2xl p-2 flex flex-col items-center">
+              <span class="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-0.5">MINUTES</span>
+              <input 
+                id="minsInput" 
+                type="number" 
+                min="0" 
+                max="59" 
+                inputmode="numeric" 
+                pattern="[0-9]*"
+                autocomplete="off"
+                placeholder="0" 
+                value="30" 
+                class="w-full text-center bg-transparent text-xl font-mono font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+
+            <div class="glass-panel-interactive rounded-2xl p-2 flex flex-col items-center">
+              <span class="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-0.5">SECONDS</span>
+              <input 
+                id="secsInput" 
+                type="number" 
+                min="0" 
+                max="59" 
+                inputmode="numeric" 
+                pattern="[0-9]*"
+                autocomplete="off"
+                placeholder="0" 
+                value="0" 
+                class="w-full text-center bg-transparent text-xl font-mono font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+          </div>
+
+          <!-- Quick Time Presets (min 38px touch target) -->
+          <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+            <button type="button" data-preset-time="15m" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              15m
+            </button>
+            <button type="button" data-preset-time="30m" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              30m
+            </button>
+            <button type="button" data-preset-time="1h" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              1h
+            </button>
+            <button type="button" data-preset-time="8h" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+              8h
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 2: 11H Shift & Downtime Input -->
+        <div id="shiftTimeSection" class="space-y-2 pt-0.5 hidden">
+          <!-- Shift Overview Card -->
+          <div class="flex items-center justify-between p-2.5 rounded-2xl bg-teal-500/10 dark:bg-teal-400/10 border border-teal-500/20">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></div>
+              <span class="text-xs font-mono font-medium text-slate-700 dark:text-slate-300 uppercase">Gross Shift</span>
+            </div>
+            <span class="text-xs font-mono font-bold text-teal-700 dark:text-teal-300">11h 00m (660m)</span>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between px-1">
+              <label for="downtimeInput" class="text-xs font-semibold tracking-wide text-slate-700 dark:text-slate-200 uppercase">
+                Downtime (minutes)
+              </label>
+              <span id="netTimeDisplay" class="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">Net: 10h 30m</span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button type="button" id="dtMinusBtn" title="Decrease 5m" aria-label="Decrease 5m" class="tap-scale w-11 h-11 flex items-center justify-center rounded-2xl glass-panel-interactive text-slate-700 dark:text-slate-200 font-bold text-lg border border-black/5 dark:border-white/10 shrink-0">
+                −
+              </button>
+
+              <div class="relative flex-1 glass-panel-interactive rounded-2xl flex items-center px-3.5 py-1.5">
+                <input 
+                  id="downtimeInput" 
+                  type="number" 
+                  min="0" 
+                  max="660" 
+                  step="1" 
+                  inputmode="numeric" 
+                  pattern="[0-9]*"
+                  autocomplete="off"
+                  placeholder="0" 
+                  value="30" 
+                  class="w-full bg-transparent text-xl font-mono font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 tracking-tight"
+                />
+                <span class="text-xs font-mono font-semibold text-slate-400 uppercase ml-2 select-none">MIN</span>
+              </div>
+
+              <button type="button" id="dtPlusBtn" title="Increase 5m" aria-label="Increase 5m" class="tap-scale w-11 h-11 flex items-center justify-center rounded-2xl glass-panel-interactive text-slate-700 dark:text-slate-200 font-bold text-lg border border-black/5 dark:border-white/10 shrink-0">
+                +
+              </button>
+            </div>
+
+            <!-- Quick Downtime Chips -->
+            <div class="grid grid-cols-5 gap-1 pt-0.5">
+              <button type="button" data-preset-dt="0" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+                0m
+              </button>
+              <button type="button" data-preset-dt="15" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+                15m
+              </button>
+              <button type="button" data-preset-dt="30" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+                30m
+              </button>
+              <button type="button" data-preset-dt="45" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+                45m
+              </button>
+              <button type="button" data-preset-dt="60" class="tap-scale min-h-[38px] py-2 rounded-xl bg-slate-200/60 dark:bg-white/[0.04] hover:bg-slate-300 dark:hover:bg-white/[0.09] text-xs font-mono text-slate-800 dark:text-slate-200 text-center font-semibold transition-colors border border-black/5 dark:border-white/5">
+                60m
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Action Bar / Mobile Sticky Footer -->
+    <footer class="mt-3 pt-1">
+      <div class="grid grid-cols-3 gap-2 mb-2">
+        <!-- Save Record -->
+        <button id="saveRecordBtn" class="tap-scale min-h-[44px] py-2.5 px-2 rounded-2xl bg-cyan-500/15 dark:bg-cyan-400/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-800 dark:text-cyan-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          <span>Save Run</span>
+        </button>
+
+        <!-- Native Web Share / Share Run -->
+        <button id="shareResultBtn" class="tap-scale min-h-[44px] py-2.5 px-2 rounded-2xl bg-blue-500/15 dark:bg-blue-400/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-800 dark:text-blue-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          <span>Share</span>
+        </button>
+
+        <!-- Copy Metrics -->
+        <button id="copyResultBtn" class="tap-scale min-h-[44px] py-2.5 px-2 rounded-2xl bg-teal-500/15 dark:bg-teal-400/20 hover:bg-teal-500/25 border border-teal-500/30 text-teal-800 dark:text-teal-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          <span>Copy</span>
+        </button>
+      </div>
+
+      <!-- Saved Records Quick View Drawer -->
+      <div id="savedRecordsContainer" class="hidden glass-panel rounded-2xl p-3 mb-2 space-y-2 border border-black/5 dark:border-white/10">
+        <div class="flex items-center justify-between text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400">
+          <span>SAVED RUNS (<span id="savedCount">0</span>) - <span class="text-[10px] text-teal-600 dark:text-teal-400 lowercase">tap to reload</span></span>
+          <button id="clearRecordsBtn" class="text-rose-500 hover:underline font-bold">Clear All</button>
+        </div>
+        <div id="recordsList" class="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scroll"></div>
+      </div>
+
+      <!-- Mini Toast Notification -->
+      <div id="toastMessage" class="hidden transition-opacity duration-200 fixed bottom-7 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-900/95 text-teal-300 border border-teal-400/40 text-xs font-mono shadow-2xl backdrop-blur-md z-50 pointer-events-none">
+        Copied
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Install / Save to Browser Modal -->
+  <div id="installModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-sm rounded-3xl p-5 border border-white/20 dark:border-white/10 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white shrink-0">
+            <svg class="w-5 h-5 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">Save as Mobile App</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">Fullscreen experience on your phone</p>
+          </div>
+        </div>
+        <button id="closeInstallModal" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Instructions based on device -->
+      <div class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 font-sans">
+        <div id="promptInstallAction" class="hidden">
+          <button id="nativeInstallTrigger" class="tap-scale w-full min-h-[44px] py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold text-xs shadow-lg shadow-teal-500/25">
+            Install App to Home Screen
+          </button>
+          <div class="text-center text-[10px] text-slate-400 mt-2">or follow manual steps below</div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-black/5 dark:bg-white/[0.04] space-y-2.5 font-mono text-[11px]">
+          <div class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-teal-500/20 text-teal-600 dark:text-teal-300 flex items-center justify-center font-bold text-[10px] shrink-0">1</span>
+            <span>Tap browser menu <span class="font-bold text-slate-900 dark:text-white">⋮</span> (Chrome) or Share <svg class="inline w-3.5 h-3.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> (Safari)</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-teal-500/20 text-teal-600 dark:text-teal-300 flex items-center justify-center font-bold text-[10px] shrink-0">2</span>
+            <span>Select <span class="text-teal-600 dark:text-teal-300 font-semibold">"Add to Home screen"</span> or <span class="text-teal-600 dark:text-teal-300 font-semibold">"Install App"</span></span>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-teal-500/20 text-teal-600 dark:text-teal-300 flex items-center justify-center font-bold text-[10px] shrink-0">3</span>
+            <span>Launch from your home screen with zero browser bars & offline support!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Register Service Worker for Offline PWA Support */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    /* Theme Management (Auto / Dark / Light) with Persistence */
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeSunIcon = document.getElementById('themeSunIcon');
+    const themeMoonIcon = document.getElementById('themeMoonIcon');
+    const metaThemeColor = document.getElementById('metaThemeColor');
+
+    let currentTheme = localStorage.getItem('cycle_theme') || 'auto';
+
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('cycle_theme', theme);
+      
+      let isDark = false;
+      if (theme === 'dark') {
+        isDark = true;
+      } else if (theme === 'light') {
+        isDark = false;
+      } else {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        themeSunIcon.classList.remove('hidden');
+        themeMoonIcon.classList.add('hidden');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#060a12');
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeSunIcon.classList.add('hidden');
+        themeMoonIcon.classList.remove('hidden');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#f1f5f9');
+      }
+      wakeLiquid();
+    }
+
+    applyTheme(currentTheme);
+
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    themeMedia.addEventListener('change', (e) => {
+      if (currentTheme === 'auto') applyTheme('auto');
+    });
+
+    themeToggleBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, themeToggleBtn);
+      playTactileFeedback(15);
+      if (currentTheme === 'auto') {
+        applyTheme('dark');
+        showToast('Theme: Dark');
+      } else if (currentTheme === 'dark') {
+        applyTheme('light');
+        showToast('Theme: Light');
+      } else {
+        applyTheme('auto');
+        showToast('Theme: Auto');
+      }
+    });
+
+    /* Haptic & Audio Feedback Control */
+    let soundEnabled = localStorage.getItem('cycle_sound') !== 'false';
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundOnIcon = document.getElementById('soundOnIcon');
+    const soundOffIcon = document.getElementById('soundOffIcon');
+
+    function updateSoundIcon() {
+      if (soundEnabled) {
+        soundOnIcon.classList.remove('hidden');
+        soundOffIcon.classList.add('hidden');
+      } else {
+        soundOnIcon.classList.add('hidden');
+        soundOffIcon.classList.remove('hidden');
+      }
+    }
+    updateSoundIcon();
+
+    soundToggleBtn.addEventListener('click', (e) => {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('cycle_sound', soundEnabled);
+      updateSoundIcon();
+      spawnLiquidRipple(e, soundToggleBtn);
+      playTactileFeedback(20);
+      showToast(soundEnabled ? 'Audio: On' : 'Audio: Muted');
+    });
+
+    let audioCtx = null;
+    function playTactileFeedback(duration = 12) {
+      // Mobile Vibration Haptic (supported on Android Chrome, etc.)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(duration); } catch (e) {}
+      }
+
+      // Subtle Web Audio Click Tone
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.035);
+        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.035);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
+    }
+
+    /* Active Calculation Mode: 'standard' | 'shift' */
+    let currentMode = localStorage.getItem('cycle_mode') || 'standard';
+    const SHIFT_SECONDS = 11 * 3600; // 11h = 39,600s
+    let unitPreference = localStorage.getItem('cycle_unit_pref') || 'auto'; // 'auto' | 'sec' | 'min'
+
+    // Mode Buttons & Sections
+    const modeStandardBtn = document.getElementById('modeStandardBtn');
+    const modeShiftBtn = document.getElementById('modeShiftBtn');
+    const standardTimeSection = document.getElementById('standardTimeSection');
+    const shiftTimeSection = document.getElementById('shiftTimeSection');
+    const timeLabel = document.getElementById('timeLabel');
+    const netTimeDisplay = document.getElementById('netTimeDisplay');
+
+    // Inputs
+    const qtyInput = document.getElementById('qtyInput');
+    const hoursInput = document.getElementById('hoursInput');
+    const minsInput = document.getElementById('minsInput');
+    const secsInput = document.getElementById('secsInput');
+    const downtimeInput = document.getElementById('downtimeInput');
+    
+    // Outputs
+    const cycleTimeMain = document.getElementById('cycleTimeMain');
+    const cycleTimeUnit = document.getElementById('cycleTimeUnit');
+    const cycleTimeAlt = document.getElementById('cycleTimeAlt');
+    const pphValue = document.getElementById('pphValue');
+    const totalTimeFormatted = document.getElementById('totalTimeFormatted');
+    const unitToggleBtn = document.getElementById('unitToggleBtn');
+    
+    const resetBtn = document.getElementById('resetBtn');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+    const shareResultBtn = document.getElementById('shareResultBtn');
+    const toastMessage = document.getElementById('toastMessage');
+    const heroCard = document.getElementById('heroCard');
+    const liquidCanvas = document.getElementById('liquidCanvas');
+
+    // Stepper Buttons
+    const qtyMinusBtn = document.getElementById('qtyMinusBtn');
+    const qtyPlusBtn = document.getElementById('qtyPlusBtn');
+    const dtMinusBtn = document.getElementById('dtMinusBtn');
+    const dtPlusBtn = document.getElementById('dtPlusBtn');
+
+    // Mobile App (PWA) Manifest Dynamic Fallback
+    const installAppBtn = document.getElementById('installAppBtn');
+    const installBtnText = document.getElementById('installBtnText');
+    const installModal = document.getElementById('installModal');
+    const closeInstallModal = document.getElementById('closeInstallModal');
+    const promptInstallAction = document.getElementById('promptInstallAction');
+    const nativeInstallTrigger = document.getElementById('nativeInstallTrigger');
+
+    const saveRecordBtn = document.getElementById('saveRecordBtn');
+    const savedRecordsContainer = document.getElementById('savedRecordsContainer');
+    const recordsList = document.getElementById('recordsList');
+    const savedCount = document.getElementById('savedCount');
+    const clearRecordsBtn = document.getElementById('clearRecordsBtn');
+
+    let deferredPrompt = null;
+    let savedRuns = [];
+    try {
+      const stored = localStorage.getItem('cycle_saved_runs');
+      if (stored) savedRuns = JSON.parse(stored);
+    } catch (e) {
+      savedRuns = [];
+    }
+
+    // Check if app is already running in standalone mobile mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) {
+      installBtnText.textContent = 'INSTALLED';
+      installAppBtn.classList.add('opacity-75');
+    }
+
+    // Capture Android/Chrome Install Prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      promptInstallAction.classList.remove('hidden');
+      installBtnText.textContent = 'INSTALL';
+    });
+
+    installAppBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, installAppBtn);
+      playTactileFeedback();
+      installModal.classList.remove('hidden');
+    });
+
+    closeInstallModal.addEventListener('click', () => {
+      installModal.classList.add('hidden');
+    });
+
+    installModal.addEventListener('click', (e) => {
+      if (e.target === installModal) installModal.classList.add('hidden');
+    });
+
+    nativeInstallTrigger.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showToast('App Installed');
+          installModal.classList.add('hidden');
+        }
+        deferredPrompt = null;
+      }
+    });
+
+    // Saved Runs Feature with LocalStorage
+    function saveRunsToStorage() {
+      try {
+        localStorage.setItem('cycle_saved_runs', JSON.stringify(savedRuns));
+      } catch (e) {}
+    }
+
+    function renderSavedRuns() {
+      if (savedRuns.length === 0) {
+        savedRecordsContainer.classList.add('hidden');
+        return;
+      }
+      savedRecordsContainer.classList.remove('hidden');
+      savedCount.textContent = savedRuns.length;
+      recordsList.innerHTML = '';
+
+      savedRuns.slice().reverse().forEach((run) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-xl bg-black/5 dark:bg-white/[0.04] text-xs font-mono group hover:bg-teal-500/10 transition-colors cursor-pointer';
+        item.innerHTML = `
+          <div class="flex-1 pr-2" data-load-run="${run.id}">
+            <div class="font-bold text-slate-800 dark:text-slate-200">${run.cycleTime}</div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400">${run.qty} pcs • ${run.pph} pcs/h • ${run.time}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 font-bold">${run.mode}</span>
+            <button type="button" data-delete-run="${run.id}" title="Delete" class="p-1 text-slate-400 hover:text-rose-500 tap-scale">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        `;
+
+        // Click run to reload parameters
+        item.querySelector('[data-load-run]').addEventListener('click', () => {
+          loadRun(run);
+        });
+
+        // Delete individual run
+        item.querySelector('[data-delete-run]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteRun(run.id);
+        });
+
+        recordsList.appendChild(item);
+      });
+    }
+
+    function loadRun(run) {
+      playTactileFeedback(15);
+      if (run.mode === 'STD') {
+        setMode('standard');
+        qtyInput.value = run.qty;
+        if (run.rawSeconds) {
+          const totalSec = run.rawSeconds;
+          hoursInput.value = Math.floor(totalSec / 3600);
+          minsInput.value = Math.floor((totalSec % 3600) / 60);
+          secsInput.value = totalSec % 60;
+        }
+      } else {
+        setMode('shift');
+        qtyInput.value = run.qty;
+        if (run.rawDowntime !== undefined) {
+          downtimeInput.value = run.rawDowntime;
+        }
+      }
+      recalculate();
+      showToast('Loaded Run');
+      triggerLiquidSplash(20);
+    }
+
+    function deleteRun(id) {
+      playTactileFeedback(10);
+      savedRuns = savedRuns.filter(r => r.id !== id);
+      saveRunsToStorage();
+      renderSavedRuns();
+      showToast('Run Removed');
+    }
+
+    saveRecordBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, saveRecordBtn);
+      triggerLiquidSplash(18);
+      playTactileFeedback(18);
+
+      const newRun = {
+        id: Date.now(),
+        cycleTime: `${cycleTimeMain.textContent} ${cycleTimeUnit.textContent}`,
+        qty: qtyInput.value || '0',
+        pph: pphValue.textContent,
+        time: totalTimeFormatted.textContent,
+        mode: currentMode === 'standard' ? 'STD' : '11H',
+        rawSeconds: currentMode === 'standard' 
+          ? ((parseFloat(hoursInput.value) || 0) * 3600 + (parseFloat(minsInput.value) || 0) * 60 + (parseFloat(secsInput.value) || 0))
+          : null,
+        rawDowntime: currentMode === 'shift' ? parseFloat(downtimeInput.value) || 0 : null
+      };
+
+      savedRuns.push(newRun);
+      saveRunsToStorage();
+      renderSavedRuns();
+      showToast('Run Saved');
+    });
+
+    clearRecordsBtn.addEventListener('click', () => {
+      if (savedRuns.length === 0) return;
+      playTactileFeedback(20);
+      savedRuns = [];
+      saveRunsToStorage();
+      renderSavedRuns();
+      showToast('All Cleared');
+    });
+
+    /* Liquid Physics Engine (Battery-Efficient with Idle Detection) */
+    const ctx = liquidCanvas.getContext('2d');
+    let width = 0;
+    let height = 0;
+    let isCanvasSleeping = false;
+    let animFrameId = null;
+
+    let targetGx = 0;
+    let targetGy = 1;
+    let currentGx = 0;
+    let currentGy = 1;
+
+    const NUM_POINTS = 36;
+    const SPRING_K = 0.038;
+    const DAMPING = 0.082;
+    const SPREAD = 0.22;
+    let waveStep = 0;
+
+    const nodes = Array.from({ length: NUM_POINTS }, () => ({ y: 0, vy: 0, targetY: 0 }));
+
+    const BUBBLE_COUNT = 12;
+    const bubbles = Array.from({ length: BUBBLE_COUNT }, () => ({
+      x: Math.random(),
+      y: 0.75 + Math.random() * 0.2,
+      vx: 0,
+      vy: 0,
+      radius: 1.2 + Math.random() * 2.2,
+      alpha: 0.25 + Math.random() * 0.45,
+      wobble: Math.random() * Math.PI * 2
+    }));
+
+    function resizeCanvas() {
+      const rect = heroCard.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2 for mobile GPU efficiency
+      width = rect.width;
+      height = rect.height;
+      if (width === 0 || height === 0) return;
+
+      liquidCanvas.width = width * dpr;
+      liquidCanvas.height = height * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      const baseFill = height * 0.72;
+      for (let i = 0; i < NUM_POINTS; i++) {
+        nodes[i].y = baseFill;
+        nodes[i].vy = 0;
+        nodes[i].targetY = baseFill;
+      }
+      wakeLiquid();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 40);
+
+    function wakeLiquid() {
+      if (isCanvasSleeping) {
+        isCanvasSleeping = false;
+        if (!animFrameId) {
+          animFrameId = requestAnimationFrame(drawLiquidWave);
+        }
+      }
+    }
+
+    function triggerLiquidSplash(amount = 22, centerRatio = 0.5) {
+      wakeLiquid();
+      const centerIndex = Math.floor(centerRatio * (NUM_POINTS - 1));
+      const spreadRadius = 7;
+
+      for (let i = 0; i < NUM_POINTS; i++) {
+        const dist = Math.abs(i - centerIndex);
+        if (dist <= spreadRadius) {
+          const factor = Math.cos((dist / spreadRadius) * (Math.PI / 2));
+          nodes[i].vy += amount * factor * (1 + Math.abs(currentGx) * 0.5);
+        }
+      }
+
+      cycleTimeMain.style.transform = 'scale(1.04) translateY(-1px)';
+      setTimeout(() => {
+        cycleTimeMain.style.transform = 'scale(1)';
+      }, 150);
+    }
+
+    function drawLiquidWave() {
+      if (!width || !height || document.hidden) {
+        animFrameId = null;
+        return;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Smooth gravity interpolation
+      currentGx += (targetGx - currentGx) * 0.08;
+      currentGy += (targetGy - currentGy) * 0.08;
+      waveStep += 0.035;
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const baseFill = height * 0.73;
+      const tiltAmplitude = width * 0.28;
+
+      const stepX = width / (NUM_POINTS - 1);
+      let totalEnergy = 0;
+
+      for (let i = 0; i < NUM_POINTS; i++) {
+        const xPos = i * stepX;
+        const normalizedX = (xPos - width / 2) / (width / 2);
+        
+        const gravitySlant = currentGx * normalizedX * tiltAmplitude;
+        const ambientTide = Math.sin(normalizedX * 2.5 + waveStep) * 3.5 * currentGy;
+
+        nodes[i].targetY = baseFill + gravitySlant + ambientTide;
+
+        const diff = nodes[i].targetY - nodes[i].y;
+        nodes[i].vy += diff * SPRING_K;
+        nodes[i].vy -= nodes[i].vy * DAMPING;
+        nodes[i].y += nodes[i].vy;
+
+        totalEnergy += Math.abs(diff) + Math.abs(nodes[i].vy);
+      }
+
+      // Dual-pass wave diffusion
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < NUM_POINTS; i++) {
+          if (i > 0) {
+            const leftDelta = SPREAD * (nodes[i].y - nodes[i - 1].y);
+            nodes[i - 1].vy += leftDelta;
+          }
+          if (i < NUM_POINTS - 1) {
+            const rightDelta = SPREAD * (nodes[i].y - nodes[i + 1].y);
+            nodes[i + 1].vy += rightDelta;
+          }
+        }
+      }
+
+      // Primary Liquid Surface
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      ctx.lineTo(0, nodes[0].y);
+
+      for (let i = 0; i < NUM_POINTS - 1; i++) {
+        const x1 = i * stepX;
+        const y1 = nodes[i].y;
+        const x2 = (i + 1) * stepX;
+        const y2 = nodes[i + 1].y;
+        const xc = (x1 + x2) / 2;
+        const yc = (y1 + y2) / 2;
+        ctx.quadraticCurveTo(x1, y1, xc, yc);
+      }
+      ctx.lineTo(width, nodes[NUM_POINTS - 1].y);
+      ctx.lineTo(width, height);
+      ctx.closePath();
+
+      const waveGrad1 = ctx.createLinearGradient(
+        width / 2 + currentGx * 30,
+        Math.min(nodes[0].y, nodes[NUM_POINTS - 1].y) - 10,
+        width / 2 - currentGx * 30,
+        height
+      );
+
+      if (isDark) {
+        waveGrad1.addColorStop(0, 'rgba(0, 245, 212, 0.22)');
+        waveGrad1.addColorStop(0.6, 'rgba(0, 187, 249, 0.12)');
+        waveGrad1.addColorStop(1, 'rgba(10, 15, 29, 0.04)');
+      } else {
+        waveGrad1.addColorStop(0, 'rgba(13, 148, 136, 0.22)');
+        waveGrad1.addColorStop(0.6, 'rgba(20, 184, 166, 0.09)');
+        waveGrad1.addColorStop(1, 'rgba(240, 253, 250, 0.02)');
+      }
+      ctx.fillStyle = waveGrad1;
+      ctx.fill();
+
+      // Liquid Surface Meniscus Highlight
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = isDark ? 'rgba(0, 245, 212, 0.45)' : 'rgba(13, 148, 136, 0.4)';
+      ctx.stroke();
+
+      // Buoyancy Bubbles
+      bubbles.forEach((b) => {
+        b.wobble += 0.05;
+        b.vx -= currentGx * 0.1 + Math.sin(b.wobble) * 0.03;
+        b.vy -= currentGy * 0.18;
+        b.vx *= 0.92;
+        b.vy *= 0.94;
+
+        b.x += b.vx / width;
+        b.y += b.vy / height;
+
+        const sampleIndex = Math.max(0, Math.min(NUM_POINTS - 1, Math.round(b.x * (NUM_POINTS - 1))));
+        const surfaceYRatio = nodes[sampleIndex].y / height;
+
+        if (b.y < surfaceYRatio + 0.02 || b.x < 0.02 || b.x > 0.98) {
+          b.x = 0.1 + Math.random() * 0.8;
+          b.y = 0.88 + Math.random() * 0.1;
+          b.vx = (Math.random() - 0.5) * 0.6;
+          b.vy = -Math.random() * 0.6;
+        }
+
+        const px = b.x * width;
+        const py = b.y * height;
+
+        ctx.beginPath();
+        ctx.arc(px, py, b.radius, 0, Math.PI * 2);
+        ctx.fillStyle = isDark
+          ? `rgba(0, 245, 212, ${b.alpha})`
+          : `rgba(13, 148, 136, ${b.alpha * 0.8})`;
+        ctx.fill();
+      });
+
+      // Battery Optimization: Idle detection
+      // If motion is stable and no touch/gyro displacement, sleep canvas
+      if (totalEnergy < 0.25 && Math.abs(currentGx - targetGx) < 0.005) {
+        isCanvasSleeping = true;
+        animFrameId = null;
+        return;
+      }
+
+      animFrameId = requestAnimationFrame(drawLiquidWave);
+    }
+
+    // Wake up canvas when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        wakeLiquid();
+      }
+    });
+
+    // Real Device Gyroscope / Accelerometer
+    function handleOrientation(e) {
+      if (e.gamma !== null && e.beta !== null) {
+        const tiltX = Math.max(-45, Math.min(45, e.gamma));
+        targetGx = tiltX / 45;
+
+        const tiltY = Math.max(10, Math.min(75, e.beta));
+        targetGy = tiltY / 45;
+        wakeLiquid();
+      }
+    }
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    // Single unified pointer listener on heroCard (Fixed duplicate listener bug)
+    let isDragging = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let hasMovedHorizontally = false;
+
+    heroCard.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      pointerStartX = e.clientX;
+      pointerStartY = e.clientY;
+      hasMovedHorizontally = false;
+
+      const rect = heroCard.getBoundingClientRect();
+      const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+
+      targetGx = (clickRatio - 0.5) * 1.5;
+      triggerLiquidSplash(24, clickRatio);
+      spawnLiquidRipple(e, heroCard);
+      playTactileFeedback(14);
+
+      // Request iOS Orientation permission if necessary
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+          }
+        }).catch(() => {});
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (isDragging) {
+        const deltaX = e.clientX - pointerStartX;
+        const deltaY = e.clientY - pointerStartY;
+
+        // If movement is predominantly horizontal, tilt the liquid
+        if (Math.abs(deltaX) > Math.abs(deltaY) || hasMovedHorizontally) {
+          hasMovedHorizontally = true;
+          pointerStartX = e.clientX;
+          targetGx = Math.max(-1, Math.min(1, targetGx + deltaX * 0.015));
+          wakeLiquid();
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      isDragging = false;
+      hasMovedHorizontally = false;
+      if (!window.DeviceOrientationEvent) {
+        targetGx = 0;
+      }
+    });
+
+    // Liquid Touch Ripples on Interactive Elements
+    function spawnLiquidRipple(e, target = e.currentTarget) {
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const ripple = document.createElement('div');
+      ripple.className = 'liquid-ripple';
+
+      const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
+      
+      const x = (clientX || (rect.left + rect.width / 2)) - rect.left;
+      const y = (clientY || (rect.top + rect.height / 2)) - rect.top;
+      const size = Math.max(rect.width, rect.height) * 0.6;
+
+      ripple.style.width = `${size}px`;
+      ripple.style.height = `${size}px`;
+      ripple.style.left = `${x - size / 2}px`;
+      ripple.style.top = `${y - size / 2}px`;
+
+      target.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 650);
+    }
+
+    // Format digital clock HH:MM:SS
+    function formatClock(totalSec) {
+      if (totalSec <= 0 || isNaN(totalSec)) return '00:00:00';
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = Math.floor(totalSec % 60);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      localStorage.setItem('cycle_mode', mode);
+      playTactileFeedback(12);
+      triggerLiquidSplash(16);
+
+      if (mode === 'standard') {
+        modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
+        modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
+        standardTimeSection.classList.remove('hidden');
+        shiftTimeSection.classList.add('hidden');
+        timeLabel.textContent = "TOTAL TIME";
+      } else {
+        modeShiftBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-sm border border-teal-500/30";
+        modeStandardBtn.className = "tap-scale flex-1 py-2 px-3 rounded-xl text-xs font-mono font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent";
+        standardTimeSection.classList.add('hidden');
+        shiftTimeSection.classList.remove('hidden');
+        timeLabel.textContent = "NET TIME";
+      }
+      recalculate();
+    }
+
+    modeStandardBtn.addEventListener('click', () => setMode('standard'));
+    modeShiftBtn.addEventListener('click', () => setMode('shift'));
+
+    // Unit Preference Toggle: Auto -> Seconds -> Minutes -> Auto
+    function updateUnitButton() {
+      unitToggleBtn.textContent = unitPreference.toUpperCase();
+    }
+    updateUnitButton();
+
+    unitToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playTactileFeedback(12);
+      if (unitPreference === 'auto') unitPreference = 'sec';
+      else if (unitPreference === 'sec') unitPreference = 'min';
+      else unitPreference = 'auto';
+      
+      localStorage.setItem('cycle_unit_pref', unitPreference);
+      updateUnitButton();
+      recalculate();
+      showToast(`Unit: ${unitPreference.toUpperCase()}`);
+    });
+
+    // Calculation Logic
+    function recalculate() {
+      const quantity = Math.max(0, parseFloat(qtyInput.value) || 0);
+      let totalSeconds = 0;
+
+      if (currentMode === 'standard') {
+        const hours = Math.max(0, parseFloat(hoursInput.value) || 0);
+        const mins = Math.max(0, parseFloat(minsInput.value) || 0);
+        const secs = Math.max(0, parseFloat(secsInput.value) || 0);
+        totalSeconds = (hours * 3600) + (mins * 60) + secs;
+      } else {
+        const downtimeMins = Math.max(0, parseFloat(downtimeInput.value) || 0);
+        const downtimeSeconds = downtimeMins * 60;
+        totalSeconds = Math.max(0, SHIFT_SECONDS - downtimeSeconds);
+
+        const netH = Math.floor(totalSeconds / 3600);
+        const netM = Math.floor((totalSeconds % 3600) / 60);
+        netTimeDisplay.textContent = `Net: ${String(netH).padStart(2, '0')}h ${String(netM).padStart(2, '0')}m`;
+      }
+
+      totalTimeFormatted.textContent = formatClock(totalSeconds);
+
+      if (quantity <= 0 || totalSeconds <= 0) {
+        cycleTimeMain.textContent = '0.00';
+        cycleTimeUnit.textContent = 's / pc';
+        cycleTimeAlt.textContent = '≈ 0.00 min / pc';
+        pphValue.textContent = '0';
+        return;
+      }
+
+      const cycleTimeSec = totalSeconds / quantity;
+      const cycleTimeMins = cycleTimeSec / 60;
+
+      // Determine display unit based on preference
+      let displayUnit = 'sec';
+      if (unitPreference === 'auto') {
+        displayUnit = cycleTimeSec >= 120 ? 'min' : 'sec';
+      } else {
+        displayUnit = unitPreference;
+      }
+
+      if (displayUnit === 'min') {
+        cycleTimeMain.textContent = cycleTimeMins < 10 ? cycleTimeMins.toFixed(2) : cycleTimeMins.toFixed(1);
+        cycleTimeUnit.textContent = 'min / pc';
+        cycleTimeAlt.textContent = `≈ ${cycleTimeSec < 100 ? cycleTimeSec.toFixed(1) : Math.round(cycleTimeSec)} s / pc`;
+      } else {
+        if (cycleTimeSec < 0.1) {
+          cycleTimeMain.textContent = cycleTimeSec.toFixed(3);
+        } else if (cycleTimeSec < 10) {
+          cycleTimeMain.textContent = cycleTimeSec.toFixed(2);
+        } else {
+          cycleTimeMain.textContent = cycleTimeSec.toFixed(1);
+        }
+        cycleTimeUnit.textContent = 's / pc';
+        cycleTimeAlt.textContent = `≈ ${cycleTimeMins.toFixed(2)} min / pc`;
+      }
+
+      const piecesPerHour = (quantity / totalSeconds) * 3600;
+      pphValue.textContent = piecesPerHour >= 100 
+        ? Math.round(piecesPerHour).toLocaleString() 
+        : piecesPerHour.toFixed(1);
+    }
+
+    // Input handlers with smooth touch highlight
+    [qtyInput, hoursInput, minsInput, secsInput, downtimeInput].forEach((input) => {
+      input.addEventListener('focus', () => {
+        setTimeout(() => input.select(), 40);
+      });
+      input.addEventListener('input', () => {
+        triggerLiquidSplash(12, 0.5);
+        recalculate();
+      });
+    });
+
+    // Mobile Stepper Buttons (+ and - buttons)
+    qtyMinusBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, qtyMinusBtn);
+      playTactileFeedback(10);
+      const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
+      qtyInput.value = Math.max(1, cur - 10);
+      triggerLiquidSplash(14, 0.4);
+      recalculate();
+    });
+
+    qtyPlusBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, qtyPlusBtn);
+      playTactileFeedback(10);
+      const cur = Math.max(0, parseInt(qtyInput.value, 10) || 0);
+      qtyInput.value = cur + 10;
+      triggerLiquidSplash(14, 0.6);
+      recalculate();
+    });
+
+    dtMinusBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, dtMinusBtn);
+      playTactileFeedback(10);
+      const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
+      downtimeInput.value = Math.max(0, cur - 5);
+      triggerLiquidSplash(14, 0.4);
+      recalculate();
+    });
+
+    dtPlusBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, dtPlusBtn);
+      playTactileFeedback(10);
+      const cur = Math.max(0, parseInt(downtimeInput.value, 10) || 0);
+      downtimeInput.value = Math.min(660, cur + 5);
+      triggerLiquidSplash(14, 0.6);
+      recalculate();
+    });
+
+    // Quantity Quick Increment Chips
+    document.querySelectorAll('[data-add-qty]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(16, 0.5);
+        playTactileFeedback(12);
+        const addVal = parseInt(e.currentTarget.getAttribute('data-add-qty'), 10);
+        const current = parseInt(qtyInput.value, 10) || 0;
+        qtyInput.value = current + addVal;
+        recalculate();
+      });
+    });
+
+    // Time Presets (Standard Mode)
+    document.querySelectorAll('[data-preset-time]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(12);
+        const preset = e.currentTarget.getAttribute('data-preset-time');
+        if (preset === '15m') {
+          hoursInput.value = 0; minsInput.value = 15; secsInput.value = 0;
+        } else if (preset === '30m') {
+          hoursInput.value = 0; minsInput.value = 30; secsInput.value = 0;
+        } else if (preset === '1h') {
+          hoursInput.value = 1; minsInput.value = 0; secsInput.value = 0;
+        } else if (preset === '8h') {
+          hoursInput.value = 8; minsInput.value = 0; secsInput.value = 0;
+        }
+        recalculate();
+      });
+    });
+
+    // Downtime Presets (11H Shift Mode)
+    document.querySelectorAll('[data-preset-dt]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        spawnLiquidRipple(e, btn);
+        triggerLiquidSplash(14);
+        playTactileFeedback(12);
+        downtimeInput.value = e.currentTarget.getAttribute('data-preset-dt');
+        recalculate();
+      });
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', (e) => {
+      spawnLiquidRipple(e, resetBtn);
+      triggerLiquidSplash(22);
+      playTactileFeedback(20);
+      if (currentMode === 'standard') {
+        qtyInput.value = 100;
+        hoursInput.value = 0;
+        minsInput.value = 30;
+        secsInput.value = 0;
+      } else {
+        qtyInput.value = 500;
+        downtimeInput.value = 30;
+      }
+      recalculate();
+      showToast('Reset');
+    });
+
+    // Summary Text Generator
+    function getCalculationSummary() {
+      const q = qtyInput.value || '0';
+      const cTime = `${cycleTimeMain.textContent} ${cycleTimeUnit.textContent}`;
+      const pph = pphValue.textContent;
+      const tot = totalTimeFormatted.textContent;
+
+      if (currentMode === 'standard') {
+        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Total Time: ${tot}\n🔢 Quantity: ${q} pcs\n(Mode: Standard)`;
+      } else {
+        const dt = downtimeInput.value || '0';
+        return `⚡ Cycle Time: ${cTime}\n📦 Throughput: ${pph} pcs/h\n⏱️ Net Time: ${tot} (Shift: 11h, DT: ${dt}m)\n🔢 Quantity: ${q} pcs\n(Mode: 11H Shift)`;
+      }
+    }
+
+    // Modern Asynchronous Clipboard Helper
+    async function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (err) {}
+      }
+      // Fallback
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = text;
+      tempTextArea.style.position = 'fixed';
+      tempTextArea.style.top = '-9999px';
+      tempTextArea.style.opacity = '0';
+      document.body.appendChild(tempTextArea);
+      tempTextArea.focus();
+      tempTextArea.select();
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        success = false;
+      }
+      document.body.removeChild(tempTextArea);
+      return success;
+    }
+
+    // Copy Metrics
+    copyResultBtn.addEventListener('click', async (e) => {
+      spawnLiquidRipple(e, copyResultBtn);
+      triggerLiquidSplash(14);
+      playTactileFeedback(12);
+      const text = getCalculationSummary();
+      const ok = await copyToClipboard(text);
+      showToast(ok ? 'Copied to Clipboard' : 'Copy Failed');
+    });
+
+    // Native Mobile Share
+    shareResultBtn.addEventListener('click', async (e) => {
+      spawnLiquidRipple(e, shareResultBtn);
+      triggerLiquidSplash(14);
+      playTactileFeedback(14);
+      const text = getCalculationSummary();
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Cycle Time Calculation',
+            text: text
+          });
+          showToast('Shared');
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            await copyToClipboard(text);
+            showToast('Copied to Clipboard');
+          }
+        }
+      } else {
+        await copyToClipboard(text);
+        showToast('Copied to Clipboard');
+      }
+    });
+
+    function showToast(text) {
+      toastMessage.textContent = text;
+      toastMessage.classList.remove('hidden');
+      setTimeout(() => {
+        toastMessage.classList.add('hidden');
+      }, 1800);
+    }
+
+    // Initialize App
+    window.addEventListener('DOMContentLoaded', () => {
+      setMode(currentMode);
+      renderSavedRuns();
+      recalculate();
+    });
+  </script>
+</body>
+</html>
